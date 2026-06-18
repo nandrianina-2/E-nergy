@@ -1,0 +1,49 @@
+import mongoose, { Schema, Model, models } from "mongoose";
+
+export interface NotificationDocument extends mongoose.Document {
+  userId: mongoose.Types.ObjectId;
+  type:
+    | "new_invoice"
+    | "reading_reminder"
+    | "payment_overdue"
+    | "payment_received"
+    | "discrepancy_alert"
+    | "account_created"
+    | "general";
+  title: string;
+  message: string;
+  isRead: boolean;
+  link?: string;
+  createdAt: Date;
+}
+
+const NotificationSchema = new Schema<NotificationDocument>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    type: {
+      type: String,
+      enum: [
+        "new_invoice",
+        "reading_reminder",
+        "payment_overdue",
+        "payment_received",
+        "discrepancy_alert",
+        "account_created",
+        "general",
+      ],
+      required: true,
+    },
+    title: { type: String, required: true },
+    message: { type: String, required: true },
+    isRead: { type: Boolean, default: false },
+    link: { type: String },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } }
+);
+
+NotificationSchema.index({ userId: 1, isRead: 1 });
+NotificationSchema.index({ createdAt: -1 });
+
+export const Notification: Model<NotificationDocument> =
+  (models.Notification as Model<NotificationDocument>) ||
+  mongoose.model<NotificationDocument>("Notification", NotificationSchema);

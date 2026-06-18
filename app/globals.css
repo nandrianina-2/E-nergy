@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+:root {
+  /* Palette E-nergy : ambre énergétique sur fond clair neutre */
+  --color-amber-glow: #d97706;
+  --color-amber-deep: #92400e;
+  --color-amber-light: #fef3c7;
+  --color-slate-ink: #0f172a;
+  --color-slate-soft: #475569;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-border: #e2e8f0;
+
+  --background: var(--color-surface);
+  --background-muted: var(--color-surface-muted);
+  --foreground: var(--color-slate-ink);
+  --foreground-muted: var(--color-slate-soft);
+  --accent: var(--color-amber-glow);
+  --accent-deep: var(--color-amber-deep);
+  --accent-soft: var(--color-amber-light);
+  --border-color: var(--color-border);
+
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #0284c7;
+}
+
+.dark {
+  --background: #0b1120;
+  --background-muted: #111827;
+  --foreground: #f1f5f9;
+  --foreground-muted: #94a3b8;
+  --accent: #f59e0b;
+  --accent-deep: #fbbf24;
+  --accent-soft: #1f2937;
+  --border-color: #1f2937;
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #f87171;
+  --info: #38bdf8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-muted: var(--background-muted);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-accent-soft: var(--accent-soft);
+  --color-border: var(--border-color);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --font-display: var(--font-outfit);
+  --font-sans: var(--font-inter);
+}
+
+* {
+  border-color: var(--border-color);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Focus visible cohérent pour l'accessibilité */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
