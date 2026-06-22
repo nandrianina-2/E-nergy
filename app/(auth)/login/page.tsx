@@ -6,10 +6,11 @@ import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Zap, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Zap, Mail, Lock, Eye, EyeOff, Download } from "lucide-react";
 import { loginSchema } from "@/lib/validations";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 import { z } from "zod";
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -19,6 +20,7 @@ function LoginForm_() {
   const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { canInstall, promptInstall } = useInstallPrompt();
 
   const {
     register,
@@ -151,6 +153,16 @@ function LoginForm_() {
               Se connecter
             </Button>
           </form>
+
+          {canInstall && (
+            <button
+              onClick={promptInstall}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] px-4 py-2.5 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--background-muted)]"
+            >
+              <Download className="h-4 w-4" />
+              Installer l'application sur cet appareil
+            </button>
+          )}
 
           <p className="mt-8 text-center text-xs text-[var(--foreground-muted)]">
             Accès réservé aux comptes créés par l'administrateur.

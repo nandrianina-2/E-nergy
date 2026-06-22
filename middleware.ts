@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth/edge-config";
 import { NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/api/auth"];
+const PUBLIC_PATHS = ["/login", "/api/auth", "/offline", "/manifest.json", "/sw.js"];
 
 export default auth((req) => {
   const { nextUrl } = req;
@@ -56,6 +56,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.svg$|.*\\.jpg$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|icons/|.*\\.png$|.*\\.svg$|.*\\.jpg$).*)",
   ],
 };

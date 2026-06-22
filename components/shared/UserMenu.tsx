@@ -4,9 +4,11 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
-import { ChevronDown, Sun, Moon, Globe, UserCircle, LogOut } from "lucide-react";
+import { toast } from "sonner";
+import { ChevronDown, Sun, Moon, Globe, UserCircle, LogOut, Download } from "lucide-react";
 import { usePreferencesStore } from "@/lib/store/preferences";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
 export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,6 +17,7 @@ export function UserMenu() {
   const { t, locale } = useTranslation();
   const setStoreLocale = usePreferencesStore((s) => s.setLocale);
   const setStoreTheme = usePreferencesStore((s) => s.setTheme);
+  const { canInstall, promptInstall } = useInstallPrompt();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -51,6 +54,14 @@ export function UserMenu() {
     const next = locale === "fr" ? "mg" : "fr";
     setStoreLocale(next);
     if (session?.user) persistPreference("language", next);
+  }
+
+  async function handleInstall() {
+    setIsOpen(false);
+    const accepted = await promptInstall();
+    if (accepted) {
+      toast.success("Application installée");
+    }
   }
 
   if (!session?.user) return null;
@@ -121,6 +132,16 @@ export function UserMenu() {
             <Globe className="h-4 w-4" />
             {locale === "fr" ? "Malagasy" : "Français"}
           </button>
+
+          {canInstall && (
+            <button
+              onClick={handleInstall}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--background-muted)]"
+            >
+              <Download className="h-4 w-4" />
+              Installer l'application
+            </button>
+          )}
 
           <div className="my-1 border-t border-[var(--border-color)]" />
 

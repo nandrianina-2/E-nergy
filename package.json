@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "seed:admin": "tsx scripts/seed-admin.ts"
+    "seed:admin": "tsx scripts/seed-admin.ts",
+    "reset:db": "tsx scripts/reset-db.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

@@ -18,10 +18,26 @@ export const metadata: Metadata = {
   title: "E-nergy — Gestion de consommation électrique",
   description:
     "Suivi du compteur principal, des sous-compteurs, des relevés, factures et paiements d'électricité.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "E-nergy",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
 };
 
 export const viewport = {
   themeColor: "#d97706",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
