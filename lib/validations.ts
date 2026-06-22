@@ -88,3 +88,54 @@ export const recordPaymentSchema = z.object({
 export const generateInvoicesSchema = z.object({
   mainMeterId: z.string().min(1),
 });
+
+export const upsertPaymentMethodSchema = z.object({
+  operator: z.enum(["mvola", "orange_money", "airtel_money"]),
+  label: z.string().min(1, "Le libellé est requis"),
+  transferCode: z.string().min(1, "Le code de transfert est requis"),
+  ussdTemplate: z
+    .string()
+    .min(1, "Le modèle USSD est requis")
+    .regex(/#$/, "Le code USSD doit se terminer par #"),
+  isActive: z.boolean().default(true),
+});
+
+export const updateSiteSettingsSchema = z.object({
+  siteName: z.string().min(1, "Le nom du site est requis").optional(),
+  logoUrl: z.string().url().optional(),
+  supportPhone: z.string().optional(),
+  supportEmail: z.string().email().optional(),
+});
+
+export const createReadingByAdminSchema = z.object({
+  submeterId: z.string().min(1, "Sous-compteur requis"),
+  period: z.string().regex(/^\d{4}-\d{2}$/, "Format de période invalide (YYYY-MM)"),
+  newIndex: z.number().min(0, "L'index doit être positif"),
+});
+
+export const createPaymentRequestSchema = z.object({
+  invoiceId: z.string().min(1),
+  method: z.enum(["mvola", "orange_money", "airtel_money", "cash"]),
+});
+
+export const reviewPaymentRequestSchema = z.object({
+  decision: z.enum(["approved", "rejected"]),
+  rejectionReason: z.string().optional(),
+});
+
+export const createConversationSchema = z.object({
+  userId: z.string().optional(), // requis si créée par un admin pour un utilisateur
+  invoiceId: z.string().optional(),
+  subject: z.string().min(1, "Le sujet est requis"),
+  text: z.string().min(1, "Le message ne peut pas être vide").optional(),
+  imageUrl: z.string().url().optional(),
+});
+
+export const sendMessageSchema = z
+  .object({
+    text: z.string().optional(),
+    imageUrl: z.string().url().optional(),
+  })
+  .refine((data) => data.text || data.imageUrl, {
+    message: "Le message doit contenir du texte ou une image",
+  });

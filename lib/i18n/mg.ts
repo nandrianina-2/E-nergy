@@ -44,6 +44,10 @@ const mg = {
     payments: "Ny fandoavako",
     profile: "Ny mombamomba ahy",
     logout: "Hiala",
+    paymentRequests: "Fangatahana fandoavana",
+    conversations: "Resaka",
+    settings: "Fandrindrana",
+    adminReadings: "Famakiana",
   },
   auth: {
     login: "Hiditra",

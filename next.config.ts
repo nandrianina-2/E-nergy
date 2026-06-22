@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  serverExternalPackages: ["tesseract.js", "pdf-parse", "mongoose", "mongodb"],
+  serverExternalPackages: ["tesseract.js", "pdf-parse", "mongoose"],
 };
 
 export default nextConfig;

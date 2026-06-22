@@ -195,68 +195,124 @@ export default function AdminUsersPage() {
             description="Ajoutez votre premier utilisateur pour commencer."
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border-color)] text-left text-[var(--foreground-muted)]">
-                  <th className="px-4 py-3 font-medium">Nom</th>
-                  <th className="px-4 py-3 font-medium">Email</th>
-                  <th className="px-4 py-3 font-medium">Rôle</th>
-                  <th className="px-4 py-3 font-medium">Sous-compteur</th>
-                  <th className="px-4 py-3 font-medium">Statut</th>
-                  <th className="px-4 py-3 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.users.map((user) => (
-                  <tr
-                    key={user._id}
-                    className="border-b border-[var(--border-color)] last:border-0"
-                  >
-                    <td className="px-4 py-3 font-medium text-[var(--foreground)]">
-                      {user.name}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--foreground-muted)]">
-                      {user.email}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={user.role === "admin" ? "info" : "neutral"}>
-                        {user.role === "admin" ? "Administrateur" : "Utilisateur"}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-[var(--foreground-muted)]">
-                      {typeof user.submeterId === "object" && user.submeterId
-                        ? `${user.submeterId.label} (${user.submeterId.code})`
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => toggleActive(user)}>
-                        <Badge variant={user.isActive ? "success" : "danger"}>
-                          {user.isActive ? "Actif" : "Inactif"}
-                        </Badge>
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => openEditModal(user)}
-                          className="rounded-lg p-2 text-[var(--foreground-muted)] hover:bg-[var(--background-muted)]"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user)}
-                          className="rounded-lg p-2 text-[var(--danger)] hover:bg-[var(--danger)]/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+          <>
+            {/* Vue tableau (desktop / tablette) */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border-color)] text-left text-[var(--foreground-muted)]">
+                    <th className="px-4 py-3 font-medium">Nom</th>
+                    <th className="px-4 py-3 font-medium">Email</th>
+                    <th className="px-4 py-3 font-medium">Rôle</th>
+                    <th className="px-4 py-3 font-medium">Sous-compteur</th>
+                    <th className="px-4 py-3 font-medium">Statut</th>
+                    <th className="px-4 py-3 font-medium text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {data.users.map((user) => (
+                    <tr
+                      key={user._id}
+                      className="border-b border-[var(--border-color)] last:border-0"
+                    >
+                      <td className="px-4 py-3 font-medium text-[var(--foreground)]">
+                        {user.name}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--foreground-muted)]">
+                        {user.email}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={user.role === "admin" ? "info" : "neutral"}>
+                          {user.role === "admin" ? "Administrateur" : "Utilisateur"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-[var(--foreground-muted)]">
+                        {typeof user.submeterId === "object" && user.submeterId
+                          ? `${user.submeterId.label} (${user.submeterId.code})`
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => toggleActive(user)}>
+                          <Badge variant={user.isActive ? "success" : "danger"}>
+                            {user.isActive ? "Actif" : "Inactif"}
+                          </Badge>
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => openEditModal(user)}
+                            className="rounded-lg p-2 text-[var(--foreground-muted)] hover:bg-[var(--background-muted)]"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(user)}
+                            className="rounded-lg p-2 text-[var(--danger)] hover:bg-[var(--danger)]/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Vue cartes (mobile) */}
+            <div className="flex flex-col gap-3 p-4 md:hidden">
+              {data.users.map((user) => (
+                <div
+                  key={user._id}
+                  className="rounded-lg border border-[var(--border-color)] p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-[var(--foreground)]">
+                        {user.name}
+                      </p>
+                      <p className="truncate text-sm text-[var(--foreground-muted)]">
+                        {user.email}
+                      </p>
+                    </div>
+                    <div className="flex flex-shrink-0 gap-1">
+                      <button
+                        onClick={() => openEditModal(user)}
+                        className="rounded-lg p-2 text-[var(--foreground-muted)] hover:bg-[var(--background-muted)]"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(user)}
+                        className="rounded-lg p-2 text-[var(--danger)] hover:bg-[var(--danger)]/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Badge variant={user.role === "admin" ? "info" : "neutral"}>
+                      {user.role === "admin" ? "Administrateur" : "Utilisateur"}
+                    </Badge>
+                    <button onClick={() => toggleActive(user)}>
+                      <Badge variant={user.isActive ? "success" : "danger"}>
+                        {user.isActive ? "Actif" : "Inactif"}
+                      </Badge>
+                    </button>
+                  </div>
+
+                  <p className="mt-2 text-xs text-[var(--foreground-muted)]">
+                    Sous-compteur :{" "}
+                    {typeof user.submeterId === "object" && user.submeterId
+                      ? `${user.submeterId.label} (${user.submeterId.code})`
+                      : "Non assigné"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {data && (

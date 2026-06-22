@@ -99,7 +99,11 @@ export default function ProfilePage() {
 
     setIsUploadingAvatar(true);
     try {
-      const sigRes = await fetch("/api/upload/signature", { method: "POST" });
+      const sigRes = await fetch("/api/upload/signature", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder: "e-nergy/avatars" }),
+      });
       const sigData = await sigRes.json();
       if (!sigRes.ok) throw new Error("Impossible de préparer l'upload");
 

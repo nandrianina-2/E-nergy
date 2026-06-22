@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -15,18 +16,26 @@ import {
   UserCircle,
   Zap,
   X,
+  BadgeCheck,
+  MessageCircle,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const adminLinks = [
   { href: "/admin/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
   { href: "/admin/users", labelKey: "users", icon: Users },
   { href: "/admin/submeters", labelKey: "submeters", icon: Gauge },
+  { href: "/admin/readings", labelKey: "adminReadings", icon: Gauge },
   { href: "/admin/main-meter", labelKey: "mainMeter", icon: FileText },
   { href: "/admin/invoices", labelKey: "invoices", icon: Receipt },
+  { href: "/admin/payment-requests", labelKey: "paymentRequests", icon: BadgeCheck },
+  { href: "/admin/conversations", labelKey: "conversations", icon: MessageCircle },
   { href: "/admin/statistics", labelKey: "statistics", icon: BarChart3 },
   { href: "/admin/notifications", labelKey: "notifications", icon: Bell },
+  { href: "/admin/settings", labelKey: "settings", icon: Settings },
 ];
 
 const userLinks = [
@@ -34,6 +43,7 @@ const userLinks = [
   { href: "/user/readings", labelKey: "readings", icon: Gauge },
   { href: "/user/invoices", labelKey: "invoices", icon: Receipt },
   { href: "/user/payments", labelKey: "payments", icon: Wallet },
+  { href: "/user/conversations", labelKey: "conversations", icon: MessageCircle },
   { href: "/user/profile", labelKey: "profile", icon: UserCircle },
 ];
 
@@ -46,6 +56,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { t } = useTranslation();
+  const { siteName, logoUrl } = useSiteSettings();
 
   const links = session?.user?.role === "admin" ? adminLinks : userLinks;
 
@@ -64,12 +75,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         )}
       >
         <div className="flex items-center justify-between border-b border-[var(--border-color)] px-5 py-4">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--accent)]">
-              <Zap className="h-5 w-5 text-white" fill="white" />
-            </div>
-            <span className="font-display text-lg font-bold text-[var(--foreground)]">
-              E-nergy
+          <Link href="/" className="flex min-w-0 items-center gap-2">
+            {logoUrl ? (
+              <Image
+                src={logoUrl}
+                alt={siteName}
+                width={36}
+                height={36}
+                className="h-9 w-9 flex-shrink-0 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]">
+                <Zap className="h-5 w-5 text-white" fill="white" />
+              </div>
+            )}
+            <span className="truncate font-display text-lg font-bold text-[var(--foreground)]">
+              {siteName}
             </span>
           </Link>
           <button onClick={onClose} className="md:hidden" aria-label="Fermer le menu">

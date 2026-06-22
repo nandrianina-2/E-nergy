@@ -137,3 +137,64 @@ export interface DashboardStats {
   unpaidAmount: number;
   discrepancy: DiscrepancyResult | null;
 }
+
+export type MobileMoneyOperator = "mvola" | "orange_money" | "airtel_money";
+export type PaymentRequestMethod = MobileMoneyOperator | "cash";
+export type PaymentRequestStatus = "pending" | "approved" | "rejected";
+
+export interface IPaymentMethod {
+  _id: string;
+  operator: MobileMoneyOperator;
+  label: string;
+  transferCode: string;
+  ussdTemplate: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ISiteSettings {
+  _id: string;
+  siteName: string;
+  logoUrl?: string;
+  supportPhone?: string;
+  supportEmail?: string;
+  updatedAt: string;
+}
+
+export interface IPaymentRequest {
+  _id: string;
+  invoiceId: string | IInvoice;
+  submeterId: string | ISubmeter;
+  userId: string | IUser;
+  amount: number;
+  method: PaymentRequestMethod;
+  status: PaymentRequestStatus;
+  reviewedBy?: string | IUser;
+  reviewedAt?: string;
+  rejectionReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IConversation {
+  _id: string;
+  userId: string | IUser;
+  invoiceId?: string | IInvoice;
+  subject: string;
+  status: "open" | "closed";
+  lastMessageAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IMessage {
+  _id: string;
+  conversationId: string;
+  senderId: string | IUser;
+  senderRole: "admin" | "user";
+  text?: string;
+  imageUrl?: string;
+  isRead: boolean;
+  createdAt: string;
+}

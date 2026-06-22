@@ -8,7 +8,11 @@ import {
   ApiError,
 } from "@/lib/api-helpers";
 import { createReadingSchema } from "@/lib/validations";
-import { notifyAllAdmins } from "@/lib/services/notifications";
+import {
+  notifyAllAdmins,
+  createNotification,
+} from "@/lib/services/notifications";
+import { formatPeriod } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   try {
@@ -113,12 +117,29 @@ export async function POST(req: NextRequest) {
       submittedAt: new Date(),
     });
 
-    await notifyAllAdmins({
-      type: "general",
-      title: "Nouveau relevé saisi",
-      message: `Le sous-compteur ${submeter.label} (${submeter.code}) a déclaré une consommation de ${consumption} kWh pour la période ${data.period}.`,
-      link: "/admin/main-meter",
-    });
+    const isAdminSubmitting = session.user.role === "admin";
+
+    if (isAdminSubmitting) {
+      // L'admin a saisi à la place de l'utilisateur : on notifie l'utilisateur concerné
+      if (submeter.userId) {
+        await createNotification({
+          userId: submeter.userId.toString(),
+          type: "general",
+          title: "Relevé saisi par l'administrateur",
+          message: `L'administrateur a saisi votre relevé pour ${formatPeriod(
+            data.period
+          )} : consommation de ${consumption} kWh.`,
+          link: "/user/readings",
+        });
+      }
+    } else {
+      await notifyAllAdmins({
+        type: "general",
+        title: "Nouveau relevé saisi",
+        message: `Le sous-compteur ${submeter.label} (${submeter.code}) a déclaré une consommation de ${consumption} kWh pour la période ${data.period}.`,
+        link: "/admin/main-meter",
+      });
+    }
 
     return NextResponse.json({ reading }, { status: 201 });
   } catch (error) {

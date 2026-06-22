@@ -164,66 +164,120 @@ export default function AdminSubmetersPage() {
             description="Ajoutez votre premier sous-compteur pour commencer."
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border-color)] text-left text-[var(--foreground-muted)]">
-                  <th className="px-4 py-3 font-medium">Code</th>
-                  <th className="px-4 py-3 font-medium">Libellé</th>
-                  <th className="px-4 py-3 font-medium">Utilisateur</th>
-                  <th className="px-4 py-3 font-medium">Index initial</th>
-                  <th className="px-4 py-3 font-medium">Statut</th>
-                  <th className="px-4 py-3 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.submeters.map((submeter) => (
-                  <tr
-                    key={submeter._id}
-                    className="border-b border-[var(--border-color)] last:border-0"
-                  >
-                    <td className="px-4 py-3 font-mono text-[var(--foreground)]">
-                      {submeter.code}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-[var(--foreground)]">
-                      {submeter.label}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--foreground-muted)]">
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border-color)] text-left text-[var(--foreground-muted)]">
+                    <th className="px-4 py-3 font-medium">Code</th>
+                    <th className="px-4 py-3 font-medium">Libellé</th>
+                    <th className="px-4 py-3 font-medium">Utilisateur</th>
+                    <th className="px-4 py-3 font-medium">Index initial</th>
+                    <th className="px-4 py-3 font-medium">Statut</th>
+                    <th className="px-4 py-3 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.submeters.map((submeter) => (
+                    <tr
+                      key={submeter._id}
+                      className="border-b border-[var(--border-color)] last:border-0"
+                    >
+                      <td className="px-4 py-3 font-mono text-[var(--foreground)]">
+                        {submeter.code}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-[var(--foreground)]">
+                        {submeter.label}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--foreground-muted)]">
+                        {typeof submeter.userId === "object" && submeter.userId
+                          ? submeter.userId.name
+                          : "Non assigné"}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--foreground-muted)]">
+                        {submeter.initialIndex} kWh
+                      </td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => toggleActive(submeter)}>
+                          <Badge variant={submeter.isActive ? "success" : "danger"}>
+                            {submeter.isActive ? "Actif" : "Inactif"}
+                          </Badge>
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => openEditModal(submeter)}
+                            className="rounded-lg p-2 text-[var(--foreground-muted)] hover:bg-[var(--background-muted)]"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(submeter)}
+                            className="rounded-lg p-2 text-[var(--danger)] hover:bg-[var(--danger)]/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-col gap-3 p-4 md:hidden">
+              {data.submeters.map((submeter) => (
+                <div
+                  key={submeter._id}
+                  className="rounded-lg border border-[var(--border-color)] p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-[var(--foreground)]">
+                        {submeter.label}
+                      </p>
+                      <p className="truncate font-mono text-xs text-[var(--foreground-muted)]">
+                        {submeter.code}
+                      </p>
+                    </div>
+                    <div className="flex flex-shrink-0 gap-1">
+                      <button
+                        onClick={() => openEditModal(submeter)}
+                        className="rounded-lg p-2 text-[var(--foreground-muted)] hover:bg-[var(--background-muted)]"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(submeter)}
+                        className="rounded-lg p-2 text-[var(--danger)] hover:bg-[var(--danger)]/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <button onClick={() => toggleActive(submeter)}>
+                      <Badge variant={submeter.isActive ? "success" : "danger"}>
+                        {submeter.isActive ? "Actif" : "Inactif"}
+                      </Badge>
+                    </button>
+                  </div>
+
+                  <div className="mt-2 text-xs text-[var(--foreground-muted)]">
+                    <p>
+                      Utilisateur :{" "}
                       {typeof submeter.userId === "object" && submeter.userId
                         ? submeter.userId.name
                         : "Non assigné"}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--foreground-muted)]">
-                      {submeter.initialIndex} kWh
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => toggleActive(submeter)}>
-                        <Badge variant={submeter.isActive ? "success" : "danger"}>
-                          {submeter.isActive ? "Actif" : "Inactif"}
-                        </Badge>
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => openEditModal(submeter)}
-                          className="rounded-lg p-2 text-[var(--foreground-muted)] hover:bg-[var(--background-muted)]"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(submeter)}
-                          className="rounded-lg p-2 text-[var(--danger)] hover:bg-[var(--danger)]/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </p>
+                    <p>Index initial : {submeter.initialIndex} kWh</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {data && (

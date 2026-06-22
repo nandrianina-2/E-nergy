@@ -356,71 +356,128 @@ export default function AdminMainMeterPage() {
             description="Importez votre première facture principale ci-dessus."
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border-color)] text-left text-[var(--foreground-muted)]">
-                  <th className="px-4 py-3 font-medium">N° Facture</th>
-                  <th className="px-4 py-3 font-medium">Période</th>
-                  <th className="px-4 py-3 font-medium">Consommation</th>
-                  <th className="px-4 py-3 font-medium">Montant total</th>
-                  <th className="px-4 py-3 font-medium">Échéance</th>
-                  <th className="px-4 py-3 font-medium">Statut</th>
-                  <th className="px-4 py-3 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.mainMeters.map((mm) => {
-                  const periodKey = `${new Date(mm.periodStart).getFullYear()}-${String(
-                    new Date(mm.periodStart).getMonth() + 1
-                  ).padStart(2, "0")}`;
-                  const status = statusConfig[mm.status];
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border-color)] text-left text-[var(--foreground-muted)]">
+                    <th className="px-4 py-3 font-medium">N° Facture</th>
+                    <th className="px-4 py-3 font-medium">Période</th>
+                    <th className="px-4 py-3 font-medium">Consommation</th>
+                    <th className="px-4 py-3 font-medium">Montant total</th>
+                    <th className="px-4 py-3 font-medium">Échéance</th>
+                    <th className="px-4 py-3 font-medium">Statut</th>
+                    <th className="px-4 py-3 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.mainMeters.map((mm) => {
+                    const periodKey = `${new Date(mm.periodStart).getFullYear()}-${String(
+                      new Date(mm.periodStart).getMonth() + 1
+                    ).padStart(2, "0")}`;
+                    const status = statusConfig[mm.status];
 
-                  return (
-                    <tr
-                      key={mm._id}
-                      className="border-b border-[var(--border-color)] last:border-0"
-                    >
-                      <td className="px-4 py-3 font-mono text-[var(--foreground)]">
-                        {mm.invoiceNumber}
-                      </td>
-                      <td className="px-4 py-3 text-[var(--foreground-muted)]">
-                        {formatPeriod(periodKey)}
-                      </td>
-                      <td className="px-4 py-3 text-[var(--foreground-muted)]">
-                        {mm.consumption} kWh
-                      </td>
-                      <td className="px-4 py-3 font-medium text-[var(--foreground)]">
+                    return (
+                      <tr
+                        key={mm._id}
+                        className="border-b border-[var(--border-color)] last:border-0"
+                      >
+                        <td className="px-4 py-3 font-mono text-[var(--foreground)]">
+                          {mm.invoiceNumber}
+                        </td>
+                        <td className="px-4 py-3 text-[var(--foreground-muted)]">
+                          {formatPeriod(periodKey)}
+                        </td>
+                        <td className="px-4 py-3 text-[var(--foreground-muted)]">
+                          {mm.consumption} kWh
+                        </td>
+                        <td className="px-4 py-3 font-medium text-[var(--foreground)]">
+                          {formatCurrency(mm.totalAmount)}
+                        </td>
+                        <td className="px-4 py-3 text-[var(--foreground-muted)]">
+                          {formatDate(mm.dueDate)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant={status.variant}>{status.label}</Badge>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {mm.status !== "allocated" ? (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleGenerateInvoices(mm._id)}
+                              isLoading={isGenerating === mm._id}
+                            >
+                              Générer les factures
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-[var(--foreground-muted)]">
+                              Déjà réparties
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-col gap-3 p-4 md:hidden">
+              {data.mainMeters.map((mm) => {
+                const periodKey = `${new Date(mm.periodStart).getFullYear()}-${String(
+                  new Date(mm.periodStart).getMonth() + 1
+                ).padStart(2, "0")}`;
+                const status = statusConfig[mm.status];
+
+                return (
+                  <div
+                    key={mm._id}
+                    className="rounded-lg border border-[var(--border-color)] p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-mono text-sm text-[var(--foreground)]">
+                          {mm.invoiceNumber}
+                        </p>
+                        <p className="text-xs text-[var(--foreground-muted)]">
+                          {formatPeriod(periodKey)}
+                        </p>
+                      </div>
+                      <Badge variant={status.variant}>{status.label}</Badge>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between text-sm">
+                      <span className="text-[var(--foreground-muted)]">
+                        {mm.consumption} kWh • Échéance {formatDate(mm.dueDate)}
+                      </span>
+                      <span className="font-medium text-[var(--foreground)]">
                         {formatCurrency(mm.totalAmount)}
-                      </td>
-                      <td className="px-4 py-3 text-[var(--foreground-muted)]">
-                        {formatDate(mm.dueDate)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={status.variant}>{status.label}</Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {mm.status !== "allocated" ? (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleGenerateInvoices(mm._id)}
-                            isLoading={isGenerating === mm._id}
-                          >
-                            Générer les factures
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-[var(--foreground-muted)]">
-                            Déjà réparties
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </span>
+                    </div>
+
+                    <div className="mt-3 border-t border-[var(--border-color)] pt-3">
+                      {mm.status !== "allocated" ? (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="w-full"
+                          onClick={() => handleGenerateInvoices(mm._id)}
+                          isLoading={isGenerating === mm._id}
+                        >
+                          Générer les factures
+                        </Button>
+                      ) : (
+                        <p className="text-center text-xs text-[var(--foreground-muted)]">
+                          Déjà réparties
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </Card>
     </div>

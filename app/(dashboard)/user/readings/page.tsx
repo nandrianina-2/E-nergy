@@ -45,43 +45,67 @@ export default function UserReadingsPage() {
             description="Vos relevés mensuels apparaîtront ici une fois saisis."
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border-color)] text-left text-[var(--foreground-muted)]">
-                  <th className="px-4 py-3 font-medium">Période</th>
-                  <th className="px-4 py-3 font-medium">Ancien index</th>
-                  <th className="px-4 py-3 font-medium">Nouvel index</th>
-                  <th className="px-4 py-3 font-medium">Consommation</th>
-                  <th className="px-4 py-3 font-medium">Date de saisie</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.readings.map((reading) => (
-                  <tr
-                    key={reading._id}
-                    className="border-b border-[var(--border-color)] last:border-0"
-                  >
-                    <td className="px-4 py-3 font-medium text-[var(--foreground)]">
-                      {formatPeriod(reading.period)}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--foreground-muted)]">
-                      {reading.oldIndex} kWh
-                    </td>
-                    <td className="px-4 py-3 text-[var(--foreground-muted)]">
-                      {reading.newIndex} kWh
-                    </td>
-                    <td className="px-4 py-3 font-medium text-[var(--accent)]">
-                      {reading.consumption} kWh
-                    </td>
-                    <td className="px-4 py-3 text-[var(--foreground-muted)]">
-                      {formatDate(reading.submittedAt)}
-                    </td>
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border-color)] text-left text-[var(--foreground-muted)]">
+                    <th className="px-4 py-3 font-medium">Période</th>
+                    <th className="px-4 py-3 font-medium">Ancien index</th>
+                    <th className="px-4 py-3 font-medium">Nouvel index</th>
+                    <th className="px-4 py-3 font-medium">Consommation</th>
+                    <th className="px-4 py-3 font-medium">Date de saisie</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {data.readings.map((reading) => (
+                    <tr
+                      key={reading._id}
+                      className="border-b border-[var(--border-color)] last:border-0"
+                    >
+                      <td className="px-4 py-3 font-medium text-[var(--foreground)]">
+                        {formatPeriod(reading.period)}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--foreground-muted)]">
+                        {reading.oldIndex} kWh
+                      </td>
+                      <td className="px-4 py-3 text-[var(--foreground-muted)]">
+                        {reading.newIndex} kWh
+                      </td>
+                      <td className="px-4 py-3 font-medium text-[var(--accent)]">
+                        {reading.consumption} kWh
+                      </td>
+                      <td className="px-4 py-3 text-[var(--foreground-muted)]">
+                        {formatDate(reading.submittedAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-col gap-3 p-4 md:hidden">
+              {data.readings.map((reading) => (
+                <div
+                  key={reading._id}
+                  className="rounded-lg border border-[var(--border-color)] p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium text-[var(--foreground)]">
+                      {formatPeriod(reading.period)}
+                    </p>
+                    <p className="font-medium text-[var(--accent)]">
+                      {reading.consumption} kWh
+                    </p>
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--foreground-muted)]">
+                    {reading.oldIndex} kWh → {reading.newIndex} kWh • Saisi le{" "}
+                    {formatDate(reading.submittedAt)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {data && (

@@ -1,33 +1,55 @@
 "use client";
 
-import { Menu } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { Menu, Zap } from "lucide-react";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import { UserMenu } from "./UserMenu";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 interface HeaderProps {
   onMenuClick: () => void;
-  title?: string;
 }
 
-export function Header({ onMenuClick, title }: HeaderProps) {
+export function Header({ onMenuClick }: HeaderProps) {
+  const { siteName, logoUrl } = useSiteSettings();
+
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--background)]/95 px-4 py-3 backdrop-blur sm:px-6">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-[var(--border-color)] bg-[var(--background)]/95 px-3 py-3 backdrop-blur sm:px-6">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           onClick={onMenuClick}
-          className="rounded-lg p-1.5 text-[var(--foreground-muted)] hover:bg-[var(--background-muted)] md:hidden"
+          className="flex-shrink-0 rounded-lg p-1.5 text-[var(--foreground-muted)] hover:bg-[var(--background-muted)] md:hidden"
           aria-label="Ouvrir le menu"
         >
           <Menu className="h-5 w-5" />
         </button>
-        {title && (
-          <h1 className="font-display text-lg font-semibold text-[var(--foreground)] sm:text-xl">
-            {title}
-          </h1>
-        )}
+
+        {/* Logo + nom du site : visible uniquement sur mobile, la sidebar le montre déjà sur desktop */}
+        <Link
+          href="/"
+          className="flex min-w-0 items-center gap-2 md:hidden"
+        >
+          {logoUrl ? (
+            <Image
+              src={logoUrl}
+              alt={siteName}
+              width={28}
+              height={28}
+              className="h-7 w-7 flex-shrink-0 rounded-lg object-cover"
+            />
+          ) : (
+            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]">
+              <Zap className="h-4 w-4 text-white" fill="white" />
+            </div>
+          )}
+          <span className="truncate font-display text-base font-bold text-[var(--foreground)]">
+            {siteName}
+          </span>
+        </Link>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
         <NotificationsDropdown />
         <UserMenu />
       </div>

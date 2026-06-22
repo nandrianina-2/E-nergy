@@ -1,0 +1,117 @@
+"use client";
+
+import { useEffect } from "react";
+import Link from "next/link";
+import { ArrowLeft, ExternalLink } from "lucide-react";
+import { use } from "react";
+import { useFetch } from "@/hooks/useFetch";
+import { Chat } from "@/components/shared/Chat";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { IConversation, IMessage } from "@/types";
+import { formatDate } from "@/lib/utils";
+
+interface MessagesResponse {
+  messages: IMessage[];
+}
+
+interface ConversationResponse {
+  conversation: IConversation & { unreadCount: number };
+}
+
+export default function AdminConversationDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+
+  const {
+    data: convData,
+    isLoading: convLoading,
+  } = useFetch<ConversationResponse>(`/api/conversations/${id}`);
+
+  const {
+    data: msgData,
+    isLoading: msgLoading,
+    refetch,
+  } = useFetch<MessagesResponse>(`/api/conversations/${id}/messages`);
+
+  // Marquer comme lu à l'ouverture
+  useEffect(() => {
+    fetch(`/api/conversations/${id}/read`, { method: "PATCH" }).catch(() => {});
+  }, [id]);
+
+  const conv = convData?.conversation;
+  const messages = msgData?.messages || [];
+  const user = conv ? (typeof conv.userId === "object" ? conv.userId : null) : null;
+  const invoice = conv
+    ? typeof conv.invoiceId === "object"
+      ? conv.invoiceId
+      : null
+    : null;
+
+  return (
+    <div className="flex flex-col gap-4 h-[calc(100vh-120px)]">
+      <div className="flex items-center gap-3">
+        <Link
+          href="/admin/conversations"
+          className="flex items-center gap-1.5 text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Retour
+        </Link>
+      </div>
+
+      {convLoading ? (
+        <p className="text-sm text-[var(--foreground-muted)]">Chargement…</p>
+      ) : conv ? (
+        <>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="font-display text-xl font-bold text-[var(--foreground)]">
+                {conv.subject}
+              </h1>
+              <p className="text-sm text-[var(--foreground-muted)]">
+                {(user as any)?.name || "Utilisateur"} •{" "}
+                {formatDate(conv.createdAt)}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {invoice && (
+                <Link
+                  href={`/admin/invoices`}
+                  className="inline-flex items-center gap-1 text-xs text-[var(--accent)] hover:underline"
+                >
+                  Facture {(invoice as any).invoiceNumber}
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+              )}
+              <Badge variant={conv.status === "open" ? "success" : "neutral"}>
+                {conv.status === "open" ? "Ouverte" : "Fermée"}
+              </Badge>
+            </div>
+          </div>
+
+          <Card className="flex-1 flex flex-col overflow-hidden">
+            {msgLoading ? (
+              <p className="p-4 text-sm text-[var(--foreground-muted)]">
+                Chargement des messages…
+              </p>
+            ) : (
+              <Chat
+                conversationId={id}
+                messages={messages}
+                onMessageSent={refetch}
+              />
+            )}
+          </Card>
+        </>
+      ) : (
+        <p className="text-sm text-[var(--foreground-muted)]">
+          Conversation introuvable.
+        </p>
+      )}
+    </div>
+  );
+}

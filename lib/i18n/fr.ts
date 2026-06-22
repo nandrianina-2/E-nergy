@@ -44,6 +44,10 @@ const fr = {
     payments: "Mes paiements",
     profile: "Mon profil",
     logout: "Déconnexion",
+    paymentRequests: "Demandes de paiement",
+    conversations: "Discussions",
+    settings: "Paramètres",
+    adminReadings: "Relevés",
   },
   auth: {
     login: "Connexion",

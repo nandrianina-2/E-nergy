@@ -62,7 +62,7 @@ export default function AdminStatisticsPage() {
         <Select
           value={months}
           onChange={(e) => setMonths(parseInt(e.target.value))}
-          className="w-44"
+          className="w-full sm:w-44"
         >
           <option value={3}>3 derniers mois</option>
           <option value={6}>6 derniers mois</option>
