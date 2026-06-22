@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { INotification } from "@/types";
+import { useNotificationSound } from "./useNotificationSound";
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<INotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const { play } = useNotificationSound();
+  const previousUnreadRef = useRef<number | null>(null);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -14,12 +17,23 @@ export function useNotifications() {
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications);
+
+        // Joue le son seulement si le compteur augmente par rapport à la dernière
+        // valeur connue (et pas lors du tout premier chargement de la page).
+        if (
+          previousUnreadRef.current !== null &&
+          data.unreadCount > previousUnreadRef.current
+        ) {
+          play();
+        }
+        previousUnreadRef.current = data.unreadCount;
+
         setUnreadCount(data.unreadCount);
       }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [play]);
 
   useEffect(() => {
     fetchNotifications();

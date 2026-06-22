@@ -1,6 +1,7 @@
 "use client";
 
-import { Bell, CheckCheck } from "lucide-react";
+import Link from "next/link";
+import { Bell, CheckCheck, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Card } from "@/components/ui/Card";
@@ -63,32 +64,58 @@ export default function AdminNotificationsPage() {
           <EmptyState icon={Bell} title="Aucune notification" />
         ) : (
           <div>
-            {notifications.map((n) => (
-              <button
-                key={n._id}
-                onClick={() => !n.isRead && markAsRead(n._id)}
-                className={cn(
-                  "flex w-full gap-3 border-b border-[var(--border-color)] p-4 text-left last:border-0 hover:bg-[var(--background-muted)]",
-                  !n.isRead && "bg-[var(--accent-soft)]/30"
-                )}
-              >
-                <span
-                  className={cn(
-                    "mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full",
-                    typeColors[n.type] || "bg-[var(--foreground-muted)]"
+            {notifications.map((n) => {
+              const content = (
+                <>
+                  <span
+                    className={cn(
+                      "mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full",
+                      typeColors[n.type] || "bg-[var(--foreground-muted)]"
+                    )}
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium text-[var(--foreground)]">{n.title}</p>
+                    <p className="mt-0.5 text-sm text-[var(--foreground-muted)]">
+                      {n.message}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--foreground-muted)]">
+                      {timeAgo(n.createdAt)}
+                    </p>
+                  </div>
+                  {n.link && (
+                    <ChevronRight className="h-4 w-4 flex-shrink-0 self-center text-[var(--foreground-muted)]" />
                   )}
-                />
-                <div className="flex-1">
-                  <p className="font-medium text-[var(--foreground)]">{n.title}</p>
-                  <p className="mt-0.5 text-sm text-[var(--foreground-muted)]">
-                    {n.message}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--foreground-muted)]">
-                    {timeAgo(n.createdAt)}
-                  </p>
-                </div>
-              </button>
-            ))}
+                </>
+              );
+
+              const sharedClassName = cn(
+                "flex w-full gap-3 border-b border-[var(--border-color)] p-4 text-left last:border-0 hover:bg-[var(--background-muted)]",
+                !n.isRead && "bg-[var(--accent-soft)]/30"
+              );
+
+              if (n.link) {
+                return (
+                  <Link
+                    key={n._id}
+                    href={n.link}
+                    onClick={() => !n.isRead && markAsRead(n._id)}
+                    className={sharedClassName}
+                  >
+                    {content}
+                  </Link>
+                );
+              }
+
+              return (
+                <button
+                  key={n._id}
+                  onClick={() => !n.isRead && markAsRead(n._id)}
+                  className={sharedClassName}
+                >
+                  {content}
+                </button>
+              );
+            })}
           </div>
         )}
       </Card>

@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { useSidebarBadges } from "@/hooks/useSidebarBadges";
 
 const adminLinks = [
   { href: "/admin/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
@@ -31,10 +32,25 @@ const adminLinks = [
   { href: "/admin/readings", labelKey: "adminReadings", icon: Gauge },
   { href: "/admin/main-meter", labelKey: "mainMeter", icon: FileText },
   { href: "/admin/invoices", labelKey: "invoices", icon: Receipt },
-  { href: "/admin/payment-requests", labelKey: "paymentRequests", icon: BadgeCheck },
-  { href: "/admin/conversations", labelKey: "conversations", icon: MessageCircle },
+  {
+    href: "/admin/payment-requests",
+    labelKey: "paymentRequests",
+    icon: BadgeCheck,
+    badgeKey: "paymentRequests" as const,
+  },
+  {
+    href: "/admin/conversations",
+    labelKey: "conversations",
+    icon: MessageCircle,
+    badgeKey: "conversations" as const,
+  },
   { href: "/admin/statistics", labelKey: "statistics", icon: BarChart3 },
-  { href: "/admin/notifications", labelKey: "notifications", icon: Bell },
+  {
+    href: "/admin/notifications",
+    labelKey: "notifications",
+    icon: Bell,
+    badgeKey: "notifications" as const,
+  },
   { href: "/admin/settings", labelKey: "settings", icon: Settings },
 ];
 
@@ -43,7 +59,12 @@ const userLinks = [
   { href: "/user/readings", labelKey: "readings", icon: Gauge },
   { href: "/user/invoices", labelKey: "invoices", icon: Receipt },
   { href: "/user/payments", labelKey: "payments", icon: Wallet },
-  { href: "/user/conversations", labelKey: "conversations", icon: MessageCircle },
+  {
+    href: "/user/conversations",
+    labelKey: "conversations",
+    icon: MessageCircle,
+    badgeKey: "conversations" as const,
+  },
   { href: "/user/profile", labelKey: "profile", icon: UserCircle },
 ];
 
@@ -57,6 +78,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { data: session } = useSession();
   const { t } = useTranslation();
   const { siteName, logoUrl } = useSiteSettings();
+  const { badges } = useSidebarBadges();
 
   const links = session?.user?.role === "admin" ? adminLinks : userLinks;
 
@@ -106,6 +128,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               const label =
                 (t.nav as Record<string, string>)[link.labelKey] ||
                 link.labelKey;
+              const badgeCount =
+                "badgeKey" in link && link.badgeKey
+                  ? badges[link.badgeKey] || 0
+                  : 0;
 
               return (
                 <li key={link.href}>
@@ -120,7 +146,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     )}
                   >
                     <Icon className="h-4.5 w-4.5 shrink-0" />
-                    {label}
+                    <span className="flex-1 truncate">{label}</span>
+                    {badgeCount > 0 && (
+                      <span
+                        className={cn(
+                          "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold",
+                          isActive
+                            ? "bg-white/25 text-white"
+                            : "bg-[var(--danger)] text-white"
+                        )}
+                      >
+                        {badgeCount > 9 ? "9+" : badgeCount}
+                      </span>
+                    )}
                   </Link>
                 </li>
               );

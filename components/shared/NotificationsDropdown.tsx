@@ -84,34 +84,60 @@ export function NotificationsDropdown() {
                 {t.notifications.empty}
               </p>
             ) : (
-              notifications.map((n) => (
-                <button
-                  key={n._id}
-                  onClick={() => !n.isRead && markAsRead(n._id)}
-                  className={cn(
-                    "flex w-full gap-3 border-b border-[var(--border-color)] p-3 text-left hover:bg-[var(--background-muted)]",
-                    !n.isRead && "bg-[var(--accent-soft)]/30"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-                      typeColors[n.type] || "bg-[var(--foreground-muted)]"
-                    )}
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-[var(--foreground)]">
-                      {n.title}
-                    </p>
-                    <p className="mt-0.5 text-xs text-[var(--foreground-muted)] line-clamp-2">
-                      {n.message}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--foreground-muted)]">
-                      {timeAgo(n.createdAt)}
-                    </p>
-                  </div>
-                </button>
-              ))
+              notifications.map((n) => {
+                const content = (
+                  <>
+                    <span
+                      className={cn(
+                        "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                        typeColors[n.type] || "bg-[var(--foreground-muted)]"
+                      )}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-[var(--foreground)]">
+                        {n.title}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--foreground-muted)] line-clamp-2">
+                        {n.message}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--foreground-muted)]">
+                        {timeAgo(n.createdAt)}
+                      </p>
+                    </div>
+                  </>
+                );
+
+                const sharedClassName = cn(
+                  "flex w-full gap-3 border-b border-[var(--border-color)] p-3 text-left hover:bg-[var(--background-muted)]",
+                  !n.isRead && "bg-[var(--accent-soft)]/30"
+                );
+
+                if (n.link) {
+                  return (
+                    <Link
+                      key={n._id}
+                      href={n.link}
+                      onClick={() => {
+                        if (!n.isRead) markAsRead(n._id);
+                        setIsOpen(false);
+                      }}
+                      className={sharedClassName}
+                    >
+                      {content}
+                    </Link>
+                  );
+                }
+
+                return (
+                  <button
+                    key={n._id}
+                    onClick={() => !n.isRead && markAsRead(n._id)}
+                    className={sharedClassName}
+                  >
+                    {content}
+                  </button>
+                );
+              })
             )}
           </div>
         </div>

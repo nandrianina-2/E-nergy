@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { toast } from "sonner";
-import { ChevronDown, Sun, Moon, Globe, UserCircle, LogOut, Download } from "lucide-react";
+import { ChevronDown, Sun, Moon, Globe, UserCircle, LogOut, Download, Volume2, VolumeX } from "lucide-react";
 import { usePreferencesStore } from "@/lib/store/preferences";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
@@ -17,6 +17,8 @@ export function UserMenu() {
   const { t, locale } = useTranslation();
   const setStoreLocale = usePreferencesStore((s) => s.setLocale);
   const setStoreTheme = usePreferencesStore((s) => s.setTheme);
+  const soundEnabled = usePreferencesStore((s) => s.soundEnabled);
+  const toggleSound = usePreferencesStore((s) => s.toggleSound);
   const { canInstall, promptInstall } = useInstallPrompt();
 
   useEffect(() => {
@@ -131,6 +133,18 @@ export function UserMenu() {
           >
             <Globe className="h-4 w-4" />
             {locale === "fr" ? "Malagasy" : "Français"}
+          </button>
+
+          <button
+            onClick={toggleSound}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--background-muted)]"
+          >
+            {soundEnabled ? (
+              <Volume2 className="h-4 w-4" />
+            ) : (
+              <VolumeX className="h-4 w-4" />
+            )}
+            {soundEnabled ? "Désactiver les sons" : "Activer les sons"}
           </button>
 
           {canInstall && (

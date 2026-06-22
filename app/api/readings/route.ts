@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
         type: "general",
         title: "Nouveau relevé saisi",
         message: `Le sous-compteur ${submeter.label} (${submeter.code}) a déclaré une consommation de ${consumption} kWh pour la période ${data.period}.`,
-        link: "/admin/main-meter",
+        link: "/admin/readings",
       });
     }
 

@@ -52,8 +52,8 @@ export default function AdminConversationDetailPage({
     : null;
 
   return (
-    <div className="flex flex-col gap-4 h-[calc(100vh-120px)]">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-3 h-full min-h-0">
+      <div className="flex items-center gap-3 flex-shrink-0">
         <Link
           href="/admin/conversations"
           className="flex items-center gap-1.5 text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
@@ -67,17 +67,17 @@ export default function AdminConversationDetailPage({
         <p className="text-sm text-[var(--foreground-muted)]">Chargement…</p>
       ) : conv ? (
         <>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h1 className="font-display text-xl font-bold text-[var(--foreground)]">
+          <div className="flex flex-wrap items-start justify-between gap-3 flex-shrink-0">
+            <div className="min-w-0">
+              <h1 className="font-display text-lg sm:text-xl font-bold text-[var(--foreground)] truncate">
                 {conv.subject}
               </h1>
-              <p className="text-sm text-[var(--foreground-muted)]">
+              <p className="text-xs sm:text-sm text-[var(--foreground-muted)] truncate">
                 {(user as any)?.name || "Utilisateur"} •{" "}
                 {formatDate(conv.createdAt)}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {invoice && (
                 <Link
                   href={`/admin/invoices`}
@@ -93,7 +93,7 @@ export default function AdminConversationDetailPage({
             </div>
           </div>
 
-          <Card className="flex-1 flex flex-col overflow-hidden">
+          <Card className="flex-1 flex flex-col overflow-hidden min-h-0">
             {msgLoading ? (
               <p className="p-4 text-sm text-[var(--foreground-muted)]">
                 Chargement des messages…

@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Send, Image as ImageIcon, Loader2, X } from "lucide-react";
+import { Send, Image as ImageIcon, Loader2, X, Wifi, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IMessage } from "@/types";
 import { Button } from "@/components/ui/Button";
+import { useConversationStream } from "@/hooks/useConversationStream";
+import { useNotificationSound } from "@/hooks/useNotificationSound";
 
 interface ChatProps {
   conversationId: string;
@@ -42,12 +44,54 @@ export function Chat({ conversationId, messages, onMessageSent }: ChatProps) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [liveMessages, setLiveMessages] = useState<IMessage[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Réinitialise les messages temps réel quand la liste de base (rechargée depuis l'API) change,
+  // pour éviter d'accumuler des doublons après un refetch complet.
+  useEffect(() => {
+    setLiveMessages([]);
+  }, [conversationId, messages.length]);
+
+  const { play: playNotificationSound } = useNotificationSound();
+
+  const { isConnected } = useConversationStream({
+    conversationId,
+    onNewMessages: (newMsgs) => {
+      setLiveMessages((prev) => {
+        const knownIds = new Set([...messages, ...prev].map((m) => m._id));
+        const fresh = newMsgs.filter((m) => !knownIds.has(m._id));
+        if (fresh.length === 0) return prev;
+
+        // Joue le son uniquement si au moins un des nouveaux messages
+        // vient de l'autre partie (pas pour ses propres messages confirmés par SSE).
+        const hasMessageFromOther = fresh.some((m) => {
+          const senderId =
+            typeof m.senderId === "object" ? m.senderId._id : m.senderId;
+          return senderId !== session?.user?.id;
+        });
+        if (hasMessageFromOther) playNotificationSound();
+
+        return [...prev, ...fresh];
+      });
+    },
+  });
+
+  // Fusion des messages chargés via l'API et de ceux reçus en direct via SSE,
+  // dédoublonnés et triés chronologiquement.
+  const allMessages = useMemo(() => {
+    const byId = new Map<string, IMessage>();
+    for (const m of messages) byId.set(m._id, m);
+    for (const m of liveMessages) byId.set(m._id, m);
+    return Array.from(byId.values()).sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+  }, [messages, liveMessages]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [allMessages.length]);
 
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -127,7 +171,7 @@ export function Chat({ conversationId, messages, onMessageSent }: ChatProps) {
 
   // Regrouper les messages par date
   const grouped: { date: string; messages: IMessage[] }[] = [];
-  for (const msg of messages) {
+  for (const msg of allMessages) {
     const d = new Date(msg.createdAt).toDateString();
     const last = grouped[grouped.length - 1];
     if (last && last.date === d) {
@@ -138,10 +182,25 @@ export function Chat({ conversationId, messages, onMessageSent }: ChatProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
+      {/* Indicateur de connexion temps réel, discret */}
+      <div className="flex items-center justify-end gap-1.5 px-3 pt-2 text-xs text-[var(--foreground-muted)]">
+        {isConnected ? (
+          <>
+            <Wifi className="h-3 w-3 text-[var(--success)]" />
+            <span className="hidden sm:inline">En direct</span>
+          </>
+        ) : (
+          <>
+            <WifiOff className="h-3 w-3" />
+            <span className="hidden sm:inline">Connexion…</span>
+          </>
+        )}
+      </div>
+
       {/* Fil de messages */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 min-h-0">
-        {messages.length === 0 && (
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-4 min-h-0">
+        {allMessages.length === 0 && (
           <p className="text-center text-sm text-[var(--foreground-muted)] py-8">
             Aucun message. Soyez le premier à écrire.
           </p>
@@ -175,7 +234,7 @@ export function Chat({ conversationId, messages, onMessageSent }: ChatProps) {
                   <div
                     key={msg._id}
                     className={cn(
-                      "flex gap-2 max-w-[80%]",
+                      "flex gap-2 max-w-[88%] sm:max-w-[75%]",
                       isMe ? "self-end flex-row-reverse" : "self-start flex-row"
                     )}
                   >
@@ -212,7 +271,7 @@ export function Chat({ conversationId, messages, onMessageSent }: ChatProps) {
                               alt="Image envoyée"
                               width={240}
                               height={180}
-                              className="mt-1 rounded-lg object-cover max-w-full cursor-pointer hover:opacity-90"
+                              className="mt-1 rounded-lg object-cover w-full max-w-[200px] sm:max-w-[240px] h-auto cursor-pointer hover:opacity-90"
                             />
                           </a>
                         )}
@@ -262,7 +321,7 @@ export function Chat({ conversationId, messages, onMessageSent }: ChatProps) {
       )}
 
       {/* Zone de saisie */}
-      <div className="border-t border-[var(--border-color)] p-3 flex items-end gap-2">
+      <div className="border-t border-[var(--border-color)] p-2 sm:p-3 flex items-end gap-1.5 sm:gap-2 flex-shrink-0">
         <button
           onClick={() => fileInputRef.current?.click()}
           className="flex-shrink-0 rounded-lg p-2 text-[var(--foreground-muted)] hover:bg-[var(--background-muted)]"
@@ -287,9 +346,9 @@ export function Chat({ conversationId, messages, onMessageSent }: ChatProps) {
               handleSend();
             }
           }}
-          placeholder="Écrire un message… (Entrée pour envoyer)"
+          placeholder="Écrire un message…"
           rows={1}
-          className="flex-1 resize-none rounded-lg border border-[var(--border-color)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--foreground-muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 max-h-32 overflow-y-auto"
+          className="flex-1 min-w-0 resize-none rounded-lg border border-[var(--border-color)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--foreground-muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 max-h-32 overflow-y-auto"
         />
 
         <Button

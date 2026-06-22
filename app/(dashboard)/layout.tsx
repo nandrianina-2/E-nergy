@@ -12,11 +12,13 @@ export default function DashboardLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-[var(--background-muted)]">
+    <div className="flex h-dvh bg-[var(--background-muted)]">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <div className="flex flex-1 flex-col md:ml-0">
+      <div className="flex flex-1 flex-col md:ml-0 min-w-0">
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
-        <main className="flex-1 p-4 sm:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-0">
+          {children}
+        </main>
       </div>
     </div>
   );
