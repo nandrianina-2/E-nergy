@@ -4,6 +4,8 @@ import { Payment, Invoice } from "@/lib/models";
 import { requireAuth, requireAdmin, handleApiError, ApiError } from "@/lib/api-helpers";
 import { recordPaymentSchema } from "@/lib/validations";
 import { createNotification } from "@/lib/services/notifications";
+import { paymentDecisionEmailTemplate } from "@/lib/services/email";
+import { formatCurrency } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   try {
@@ -66,6 +68,10 @@ export async function POST(req: NextRequest) {
     if (!invoice) {
       throw new ApiError("Facture introuvable", 404);
     }
+    await invoice.populate({
+      path: "submeterId",
+      populate: { path: "userId", select: "name email" },
+    });
 
     const remainingBefore = invoice.totalAmount - invoice.amountPaid;
     if (data.amount > remainingBefore + 0.01) {
@@ -95,14 +101,14 @@ export async function POST(req: NextRequest) {
     await invoice.save();
 
     const submeter = invoice.submeterId as unknown as {
-      userId?: string;
+      userId?: { _id: string; name: string; email: string };
       code: string;
       label: string;
     };
 
     if (submeter.userId) {
       await createNotification({
-        userId: submeter.userId.toString(),
+        userId: submeter.userId._id.toString(),
         type: "payment_received",
         title: "Paiement enregistré",
         message: `Un paiement de ${data.amount} Ar a été enregistré pour la facture ${invoice.invoiceNumber}. Statut : ${
@@ -111,6 +117,13 @@ export async function POST(req: NextRequest) {
             : "Partiellement payée"
         }.`,
         link: "/user/payments",
+        sendEmailToo: true,
+        emailHtml: paymentDecisionEmailTemplate({
+          userName: submeter.userId.name,
+          invoiceNumber: invoice.invoiceNumber,
+          amount: formatCurrency(data.amount),
+          decision: "approved",
+        }),
       });
     }
 

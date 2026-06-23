@@ -5,6 +5,7 @@ import { requireAdmin, handleApiError } from "@/lib/api-helpers";
 import { createMainMeterSchema } from "@/lib/validations";
 import { checkDiscrepancy } from "@/lib/services/allocation";
 import { notifyAllAdmins } from "@/lib/services/notifications";
+import { discrepancyAlertEmailTemplate } from "@/lib/services/email";
 
 export async function GET(req: NextRequest) {
   try {
@@ -74,6 +75,12 @@ export async function POST(req: NextRequest) {
             discrepancy.submetersTotalConsumption
           } kWh).`,
           link: "/admin/main-meter",
+          sendEmailToo: true,
+          emailHtml: discrepancyAlertEmailTemplate({
+            mainMeterConsumption: discrepancy.mainMeterConsumption,
+            submetersTotal: discrepancy.submetersTotalConsumption,
+            differencePercent: discrepancy.differencePercent,
+          }),
         });
       }
     }

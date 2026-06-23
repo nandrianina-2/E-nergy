@@ -7,6 +7,7 @@ export interface MessageDocument extends mongoose.Document {
   text?: string;
   imageUrl?: string;
   isRead: boolean;
+  reminderEmailSent: boolean;
   createdAt: Date;
 }
 
@@ -22,11 +23,13 @@ const MessageSchema = new Schema<MessageDocument>(
     text: { type: String },
     imageUrl: { type: String },
     isRead: { type: Boolean, default: false },
+    reminderEmailSent: { type: Boolean, default: false },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
 MessageSchema.index({ conversationId: 1, createdAt: 1 });
+MessageSchema.index({ isRead: 1, reminderEmailSent: 1, createdAt: 1 });
 
 export const Message: Model<MessageDocument> =
   (models.Message as Model<MessageDocument>) ||

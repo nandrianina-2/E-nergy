@@ -122,24 +122,61 @@ middleware.ts                middleware de protection des routes (Next.js 15)
 
 ## Rappels et relances automatiques (Cron Jobs)
 
-Deux tâches s'exécutent automatiquement chaque jour via Vercel Cron (configuré dans `vercel.json`) :
+Trois tâches automatisées envoient des rappels (notification in-app + email) :
 
 | Tâche | Route | Fréquence | Logique |
 |---|---|---|---|
 | Rappel de relevé | `/api/cron/reading-reminders` | Quotidien, actif à partir du 25 du mois | Notifie + email chaque utilisateur n'ayant pas saisi son relevé du mois en cours. Une seule fois par mois (traçé via `Submeter.lastReadingReminderPeriod`). |
 | Relance impayés | `/api/cron/payment-overdue` | Quotidien | Relance chaque facture en retard (`dueDate` dépassée, statut non payé) au maximum une fois par semaine (traçé via `Invoice.lastReminderSentAt`). Notifie aussi l'admin à la 3e relance (retard persistant). |
+| Messages non lus | `/api/cron/unread-messages` | Toutes les 30-60 min | Envoie un email récapitulatif (un seul par destinataire) pour tout message de chat resté non lu depuis plus de 2h. Chaque message n'est relancé qu'une fois (traçé via `Message.reminderEmailSent`). |
 
-**Configuration requise** : générer une valeur pour `CRON_SECRET` dans `.env.local` et dans les variables d'environnement Vercel :
+### Configuration du secret
+
+Générer une valeur pour `CRON_SECRET` dans `.env.local` et dans les variables d'environnement Vercel :
 
 ```powershell
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
-Vercel envoie automatiquement ce secret en en-tête `Authorization` lors de l'invocation des cron jobs ; la route le vérifie pour rejeter tout appel non autorisé.
+Cette valeur protège les routes `/api/cron/*` : seul un appel avec ce secret en en-tête `Authorization: Bearer <secret>`, ou une session admin authentifiée, peut les déclencher.
 
-**Test manuel** : la page `/admin/automations` permet de déclencher ces tâches à la demande (avec une option pour forcer le rappel de relevé même avant le 25, utile pour tester).
+### Rappel de relevé et relance impayés (Vercel Cron)
 
-**Limite Vercel Hobby** : les cron jobs sur le plan gratuit ne peuvent s'exécuter qu'une fois par jour, sans garantie d'heure exacte (jusqu'à 59 minutes de décalage possible). C'est suffisant pour ces deux tâches qui n'ont pas besoin de précision à la minute.
+Configurés automatiquement au déploiement via `vercel.json` — aucune action supplémentaire requise. **Limite du plan Hobby** : une exécution par jour maximum, sans garantie d'heure exacte (jusqu'à 59 minutes de décalage possible). Suffisant pour ces deux tâches qui n'ont pas besoin de précision à la minute.
+
+### Messages non lus (service externe requis)
+
+La fenêtre de 2h ne peut pas être respectée par Vercel Cron sur le plan Hobby (limité à 1 exécution/jour). Il faut donc utiliser un service externe gratuit pour appeler cette route régulièrement :
+
+1. Créer un compte sur [cron-job.org](https://cron-job.org) (gratuit, aucune carte bancaire requise).
+2. Créer un nouveau cron job :
+   - **URL** : `https://e-nergy.vercel.app/api/cron/unread-messages`
+   - **Méthode** : GET
+   - **Fréquence** : toutes les 30 ou 60 minutes
+   - **En-tête personnalisé** : `Authorization: Bearer <votre CRON_SECRET>`
+3. Activer le job.
+
+La route est idempotente : des appels rapprochés ou redondants ne provoquent jamais d'envoi en double, donc une fréquence approximative ne pose aucun problème.
+
+### Test manuel
+
+La page `/admin/automations` permet de déclencher chaque tâche à la demande (avec une option pour forcer le rappel de relevé même avant le 25, utile pour tester), et affiche le résultat détaillé de la dernière exécution.
+
+## Emails
+
+Tous les emails utilisent un design unifié (en-tête E-nergy, bouton d'action, lien de secours, pied de page) défini dans `lib/services/email.ts`. Chaque email pointe vers `https://e-nergy.vercel.app` (constante `APP_URL`, à adapter si le domaine change) avec un lien direct vers la page pertinente (facture, relevé, discussion…).
+
+| Événement | Email envoyé | Déclencheur |
+|---|---|---|
+| Création de compte | Bienvenue | Admin crée un utilisateur |
+| Nouvelle facture générée | Facture disponible | Génération des factures depuis le compteur principal |
+| Rappel de saisie de relevé | Rappel de saisie | Cron, à partir du 25 du mois |
+| Facture en retard | Paiement en retard | Cron hebdomadaire |
+| Paiement validé | Confirmation | Admin valide un paiement (manuel ou demande mobile money/espèces) |
+| Paiement rejeté | Rejet + raison | Admin rejette une demande de paiement |
+| Message non lu après 2h | Récapitulatif | Cron externe (cron-job.org) |
+| Écart de consommation anormal | Alerte écart | Import facture principale ou génération de factures (notifie tous les admins) |
+| Discussion ouverte par l'admin | Nouveau message | Admin crée une conversation à destination d'un utilisateur |
 
 ## Notes pour l'extraction OCR
 

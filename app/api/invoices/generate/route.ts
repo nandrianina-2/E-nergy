@@ -9,7 +9,7 @@ import {
   createNotification,
   notifyAllAdmins,
 } from "@/lib/services/notifications";
-import { newInvoiceEmailTemplate } from "@/lib/services/email";
+import { newInvoiceEmailTemplate, discrepancyAlertEmailTemplate } from "@/lib/services/email";
 import { formatCurrency, formatDate, formatPeriod } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
@@ -135,6 +135,12 @@ export async function POST(req: NextRequest) {
           periodKey
         )}.`,
         link: "/admin/statistics",
+        sendEmailToo: true,
+        emailHtml: discrepancyAlertEmailTemplate({
+          mainMeterConsumption: discrepancy.mainMeterConsumption,
+          submetersTotal: discrepancy.submetersTotalConsumption,
+          differencePercent: discrepancy.differencePercent,
+        }),
       });
     }
 

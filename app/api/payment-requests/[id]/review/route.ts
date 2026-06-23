@@ -4,6 +4,7 @@ import { PaymentRequest, Invoice, Payment } from "@/lib/models";
 import { requireAdmin, handleApiError, ApiError } from "@/lib/api-helpers";
 import { reviewPaymentRequestSchema } from "@/lib/validations";
 import { createNotification } from "@/lib/services/notifications";
+import { paymentDecisionEmailTemplate } from "@/lib/services/email";
 import { formatCurrency } from "@/lib/utils";
 
 interface Params {
@@ -26,7 +27,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const body = await req.json();
     const data = reviewPaymentRequestSchema.parse(body);
 
-    const paymentRequest = await PaymentRequest.findById(id);
+    const paymentRequest = await PaymentRequest.findById(id).populate(
+      "userId",
+      "name email"
+    );
     if (!paymentRequest) {
       throw new ApiError("Demande de paiement introuvable", 404);
     }
@@ -47,6 +51,12 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (!invoice) {
       throw new ApiError("Facture associée introuvable", 404);
     }
+
+    const requestUser = paymentRequest.userId as unknown as {
+      _id: string;
+      name: string;
+      email: string;
+    };
 
     if (data.decision === "approved") {
       await Payment.create({
@@ -69,17 +79,24 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       await invoice.save();
 
       await createNotification({
-        userId: paymentRequest.userId.toString(),
+        userId: requestUser._id.toString(),
         type: "payment_received",
         title: "Paiement validé",
         message: `Votre paiement de ${formatCurrency(
           paymentRequest.amount
         )} pour la facture ${invoice.invoiceNumber} a été validé.`,
         link: "/user/payments",
+        sendEmailToo: true,
+        emailHtml: paymentDecisionEmailTemplate({
+          userName: requestUser.name,
+          invoiceNumber: invoice.invoiceNumber,
+          amount: formatCurrency(paymentRequest.amount),
+          decision: "approved",
+        }),
       });
     } else {
       await createNotification({
-        userId: paymentRequest.userId.toString(),
+        userId: requestUser._id.toString(),
         type: "general",
         title: "Paiement rejeté",
         message: `Votre demande de paiement pour la facture ${
@@ -88,6 +105,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           data.rejectionReason ? ` Raison : ${data.rejectionReason}` : ""
         } Vous pouvez nous contacter via la discussion liée à cette facture.`,
         link: "/user/invoices",
+        sendEmailToo: true,
+        emailHtml: paymentDecisionEmailTemplate({
+          userName: requestUser.name,
+          invoiceNumber: invoice.invoiceNumber,
+          amount: formatCurrency(paymentRequest.amount),
+          decision: "rejected",
+          rejectionReason: data.rejectionReason,
+        }),
       });
     }
 

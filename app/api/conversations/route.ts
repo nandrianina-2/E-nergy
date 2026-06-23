@@ -9,6 +9,7 @@ import {
 } from "@/lib/api-helpers";
 import { createConversationSchema } from "@/lib/validations";
 import { notifyAllAdmins, createNotification } from "@/lib/services/notifications";
+import { newMessageEmailTemplate } from "@/lib/services/email";
 
 export async function GET(req: NextRequest) {
   try {
@@ -147,6 +148,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (isAdmin) {
+      const targetUser = await User.findById(targetUserId).select("name");
       await createNotification({
         userId: targetUserId,
         type: "general",
@@ -154,6 +156,13 @@ export async function POST(req: NextRequest) {
         message: `L'administrateur a ouvert une discussion : "${data.subject}".`,
         link: "/user/conversations",
         sendEmailToo: true,
+        emailHtml: newMessageEmailTemplate({
+          recipientName: targetUser?.name || "Utilisateur",
+          senderName: session.user.name || "L'administrateur",
+          subject: data.subject,
+          messagePreview: data.text || "Nouvelle discussion ouverte",
+          isAdminRecipient: false,
+        }),
       });
     } else {
       await notifyAllAdmins({

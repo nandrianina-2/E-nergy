@@ -5,6 +5,7 @@ import { User, Submeter } from "@/lib/models";
 import { requireAdmin, handleApiError } from "@/lib/api-helpers";
 import { createUserSchema } from "@/lib/validations";
 import { createNotification } from "@/lib/services/notifications";
+import { accountCreatedEmailTemplate } from "@/lib/services/email";
 
 export async function GET(req: NextRequest) {
   try {
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
       title: "Bienvenue sur E-nergy",
       message: `Votre compte a été créé avec succès. Vous pouvez maintenant suivre votre consommation électrique.`,
       sendEmailToo: true,
+      emailHtml: accountCreatedEmailTemplate({ userName: user.name }),
     });
 
     const userResponse = user.toObject() as unknown as Record<string, unknown>;

@@ -73,6 +73,7 @@ export async function GET(req: Request) {
             invoiceNumber: invoice.invoiceNumber,
             totalAmount: formatCurrency(remainingAmount),
             dueDate: formatDate(invoice.dueDate),
+            daysOverdue,
           }),
         });
 

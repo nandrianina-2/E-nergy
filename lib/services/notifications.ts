@@ -47,6 +47,8 @@ export async function notifyAllAdmins(params: {
   title: string;
   message: string;
   link?: string;
+  sendEmailToo?: boolean;
+  emailHtml?: string;
 }) {
   await connectDB();
   const admins = await User.find({ role: "admin", isActive: true });
@@ -59,6 +61,8 @@ export async function notifyAllAdmins(params: {
         title: params.title,
         message: params.message,
         link: params.link,
+        sendEmailToo: params.sendEmailToo,
+        emailHtml: params.emailHtml,
       })
     )
   );
