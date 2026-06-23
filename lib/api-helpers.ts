@@ -58,3 +58,20 @@ export function handleApiError(error: unknown) {
     { status: 500 }
   );
 }
+
+/**
+ * Vérifie que la requête provient bien de Vercel Cron (via CRON_SECRET) OU
+ * d'un admin authentifié qui déclenche manuellement la tâche depuis l'interface
+ * (utile pour tester ou forcer une relance immédiate).
+ */
+export async function requireCronSecretOrAdmin(req: Request) {
+  const cronSecret = process.env.CRON_SECRET;
+  const authHeader = req.headers.get("authorization");
+
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+    return; // appel légitime de Vercel Cron
+  }
+
+  // Sinon, on retombe sur la vérification de session admin classique
+  await requireAdmin();
+}

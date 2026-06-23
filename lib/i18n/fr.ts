@@ -48,6 +48,7 @@ const fr = {
     conversations: "Discussions",
     settings: "Paramètres",
     adminReadings: "Relevés",
+    automations: "Automatisations",
   },
   auth: {
     login: "Connexion",

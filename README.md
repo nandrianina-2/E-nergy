@@ -120,6 +120,27 @@ middleware.ts                middleware de protection des routes (Next.js 15)
 - **Mode clair/sombre** et **interface FR/MG**, persistés par utilisateur.
 - **Sécurité des rôles** : un utilisateur ne peut jamais accéder aux données d'un autre sous-compteur (vérifié côté API, pas seulement côté UI).
 
+## Rappels et relances automatiques (Cron Jobs)
+
+Deux tâches s'exécutent automatiquement chaque jour via Vercel Cron (configuré dans `vercel.json`) :
+
+| Tâche | Route | Fréquence | Logique |
+|---|---|---|---|
+| Rappel de relevé | `/api/cron/reading-reminders` | Quotidien, actif à partir du 25 du mois | Notifie + email chaque utilisateur n'ayant pas saisi son relevé du mois en cours. Une seule fois par mois (traçé via `Submeter.lastReadingReminderPeriod`). |
+| Relance impayés | `/api/cron/payment-overdue` | Quotidien | Relance chaque facture en retard (`dueDate` dépassée, statut non payé) au maximum une fois par semaine (traçé via `Invoice.lastReminderSentAt`). Notifie aussi l'admin à la 3e relance (retard persistant). |
+
+**Configuration requise** : générer une valeur pour `CRON_SECRET` dans `.env.local` et dans les variables d'environnement Vercel :
+
+```powershell
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+Vercel envoie automatiquement ce secret en en-tête `Authorization` lors de l'invocation des cron jobs ; la route le vérifie pour rejeter tout appel non autorisé.
+
+**Test manuel** : la page `/admin/automations` permet de déclencher ces tâches à la demande (avec une option pour forcer le rappel de relevé même avant le 25, utile pour tester).
+
+**Limite Vercel Hobby** : les cron jobs sur le plan gratuit ne peuvent s'exécuter qu'une fois par jour, sans garantie d'heure exacte (jusqu'à 59 minutes de décalage possible). C'est suffisant pour ces deux tâches qui n'ont pas besoin de précision à la minute.
+
 ## Notes pour l'extraction OCR
 
 L'extraction fonctionne mieux sur des factures bien cadrées et lisibles. Les expressions reconnues incluent : "Ancien index", "Nouvel index", "Consommation", "Montant HT", "TVA/Taxe", "Montant total/Net à payer", "Date limite/Échéance", "Période du ... au ...". Si le format de votre facture diffère, les champs extraits devront être corrigés manuellement avant validation — c'est pourquoi le formulaire reste éditable après extraction.

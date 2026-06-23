@@ -15,6 +15,8 @@ export interface InvoiceDocument extends mongoose.Document {
   paymentStatus: "unpaid" | "partial" | "paid";
   amountPaid: number;
   pdfUrl?: string;
+  lastReminderSentAt?: Date;
+  reminderCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +49,8 @@ const InvoiceSchema = new Schema<InvoiceDocument>(
     },
     amountPaid: { type: Number, default: 0 },
     pdfUrl: { type: String },
+    lastReminderSentAt: { type: Date },
+    reminderCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
@@ -54,6 +58,7 @@ const InvoiceSchema = new Schema<InvoiceDocument>(
 InvoiceSchema.index({ submeterId: 1, period: 1 });
 InvoiceSchema.index({ paymentStatus: 1 });
 InvoiceSchema.index({ invoiceNumber: 1 });
+InvoiceSchema.index({ paymentStatus: 1, dueDate: 1, lastReminderSentAt: 1 });
 
 export const Invoice: Model<InvoiceDocument> =
   (models.Invoice as Model<InvoiceDocument>) ||

@@ -19,6 +19,7 @@ import {
   BadgeCheck,
   MessageCircle,
   Settings,
+  Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -45,6 +46,7 @@ const adminLinks = [
     badgeKey: "conversations" as const,
   },
   { href: "/admin/statistics", labelKey: "statistics", icon: BarChart3 },
+  { href: "/admin/automations", labelKey: "automations", icon: Workflow },
   {
     href: "/admin/notifications",
     labelKey: "notifications",

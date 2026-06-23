@@ -6,6 +6,7 @@ export interface SubmeterDocument extends mongoose.Document {
   userId?: mongoose.Types.ObjectId;
   initialIndex: number;
   isActive: boolean;
+  lastReadingReminderPeriod?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,6 +18,7 @@ const SubmeterSchema = new Schema<SubmeterDocument>(
     userId: { type: Schema.Types.ObjectId, ref: "User" },
     initialIndex: { type: Number, required: true, default: 0 },
     isActive: { type: Boolean, default: true },
+    lastReadingReminderPeriod: { type: String }, // format "YYYY-MM", évite les doublons
   },
   { timestamps: true }
 );

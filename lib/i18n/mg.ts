@@ -48,6 +48,7 @@ const mg = {
     conversations: "Resaka",
     settings: "Fandrindrana",
     adminReadings: "Famakiana",
+    automations: "Fandrindrana ho azy",
   },
   auth: {
     login: "Hiditra",

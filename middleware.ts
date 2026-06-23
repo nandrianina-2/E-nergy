@@ -1,7 +1,14 @@
 import { auth } from "@/lib/auth/edge-config";
 import { NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/api/auth", "/offline", "/manifest.json", "/sw.js"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/api/auth",
+  "/api/cron",
+  "/offline",
+  "/manifest.json",
+  "/sw.js",
+];
 
 export default auth((req) => {
   const { nextUrl } = req;
