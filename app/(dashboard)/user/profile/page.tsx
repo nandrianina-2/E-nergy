@@ -2,12 +2,13 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Camera, Loader2, UserCircle, Lock } from "lucide-react";
+import { Camera, Loader2, UserCircle, Lock, Bell } from "lucide-react";
 import { useFetch } from "@/hooks/useFetch";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -273,6 +274,29 @@ export default function ProfilePage() {
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)]">
+              <Bell className="h-5 w-5 text-[var(--accent)]" />
+            </div>
+            <div>
+              <p className="font-medium text-[var(--foreground)]">
+                Préférences de notification
+              </p>
+              <p className="text-sm text-[var(--foreground-muted)]">
+                Choisissez ce que vous recevez par email ou in-app
+              </p>
+            </div>
+          </div>
+          <Link href="/user/notification-settings" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto">
+              Gérer
+            </Button>
+          </Link>
         </CardContent>
       </Card>
     </div>

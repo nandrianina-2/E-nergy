@@ -20,6 +20,7 @@ import {
   MessageCircle,
   Settings,
   Workflow,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -53,6 +54,7 @@ const adminLinks = [
     icon: Bell,
     badgeKey: "notifications" as const,
   },
+  { href: "/admin/notification-settings", labelKey: "notificationSettings", icon: Bell },
   { href: "/admin/settings", labelKey: "settings", icon: Settings },
 ];
 
@@ -68,6 +70,7 @@ const userLinks = [
     badgeKey: "conversations" as const,
   },
   { href: "/user/profile", labelKey: "profile", icon: UserCircle },
+  { href: "/user/contact", labelKey: "contact", icon: Phone },
 ];
 
 interface SidebarProps {

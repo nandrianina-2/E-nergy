@@ -105,6 +105,7 @@ export const updateSiteSettingsSchema = z.object({
   logoUrl: z.string().url().optional(),
   supportPhone: z.string().optional(),
   supportEmail: z.string().email().optional(),
+  supportAddress: z.string().optional(),
 });
 
 export const createReadingByAdminSchema = z.object({
@@ -139,3 +140,13 @@ export const sendMessageSchema = z
   .refine((data) => data.text || data.imageUrl, {
     message: "Le message doit contenir du texte ou une image",
   });
+
+export const updateNotificationPreferencesSchema = z.object({
+  preferences: z.record(
+    z.string(),
+    z.object({
+      inApp: z.boolean(),
+      email: z.boolean(),
+    })
+  ),
+});

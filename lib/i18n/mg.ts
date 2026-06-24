@@ -49,6 +49,8 @@ const mg = {
     settings: "Fandrindrana",
     adminReadings: "Famakiana",
     automations: "Fandrindrana ho azy",
+    contact: "Fifandraisana",
+    notificationSettings: "Safidy fampahafantarana",
   },
   auth: {
     login: "Hiditra",

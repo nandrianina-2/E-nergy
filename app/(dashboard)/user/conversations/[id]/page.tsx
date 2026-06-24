@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Archive, ArchiveRestore } from "lucide-react";
 import { use } from "react";
+import { toast } from "sonner";
 import { useFetch } from "@/hooks/useFetch";
 import { Chat } from "@/components/shared/Chat";
 import { Card } from "@/components/ui/Card";
@@ -25,8 +27,10 @@ export default function UserConversationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
+  const [isArchiving, setIsArchiving] = useState(false);
 
-  const { data: convData, isLoading: convLoading } =
+  const { data: convData, isLoading: convLoading, refetch: refetchConv } =
     useFetch<ConversationResponse>(`/api/conversations/${id}`);
 
   const {
@@ -47,9 +51,35 @@ export default function UserConversationDetailPage({
       : null
     : null;
 
+  async function toggleArchive() {
+    if (!conv) return;
+    setIsArchiving(true);
+    try {
+      const res = await fetch(`/api/conversations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archivedByUser: !conv.archivedByUser }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success(
+        conv.archivedByUser ? "Discussion désarchivée" : "Discussion archivée"
+      );
+      if (!conv.archivedByUser) {
+        router.push("/user/conversations");
+      } else {
+        refetchConv();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Une erreur est survenue");
+    } finally {
+      setIsArchiving(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
-      <div className="flex items-center gap-3 flex-shrink-0">
+      <div className="flex items-center justify-between gap-3 flex-shrink-0">
         <Link
           href="/user/conversations"
           className="flex items-center gap-1.5 text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
@@ -57,6 +87,25 @@ export default function UserConversationDetailPage({
           <ArrowLeft className="h-4 w-4" />
           Retour
         </Link>
+        {conv && (
+          <button
+            onClick={toggleArchive}
+            disabled={isArchiving}
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--foreground-muted)] hover:bg-[var(--background-muted)]"
+          >
+            {conv.archivedByUser ? (
+              <>
+                <ArchiveRestore className="h-3.5 w-3.5" />
+                Désarchiver
+              </>
+            ) : (
+              <>
+                <Archive className="h-3.5 w-3.5" />
+                Archiver
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {convLoading ? (

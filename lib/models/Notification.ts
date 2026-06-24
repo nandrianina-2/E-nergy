@@ -9,6 +9,7 @@ export interface NotificationDocument extends mongoose.Document {
     | "payment_received"
     | "discrepancy_alert"
     | "account_created"
+    | "new_message"
     | "general";
   title: string;
   message: string;
@@ -29,6 +30,7 @@ const NotificationSchema = new Schema<NotificationDocument>(
         "payment_received",
         "discrepancy_alert",
         "account_created",
+        "new_message",
         "general",
       ],
       required: true,

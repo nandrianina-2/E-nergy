@@ -11,9 +11,18 @@ export interface UserDocument extends mongoose.Document {
   isActive: boolean;
   language: "fr" | "mg";
   theme: "light" | "dark";
+  notificationPreferences?: Record<string, { inApp: boolean; email: boolean }>;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const NotificationChannelSchema = new Schema(
+  {
+    inApp: { type: Boolean, default: true },
+    email: { type: Boolean, default: true },
+  },
+  { _id: false }
+);
 
 const UserSchema = new Schema<UserDocument>(
   {
@@ -33,6 +42,11 @@ const UserSchema = new Schema<UserDocument>(
     isActive: { type: Boolean, default: true },
     language: { type: String, enum: ["fr", "mg"], default: "fr" },
     theme: { type: String, enum: ["light", "dark"], default: "light" },
+    notificationPreferences: {
+      type: Map,
+      of: NotificationChannelSchema,
+      default: undefined,
+    },
   },
   { timestamps: true }
 );

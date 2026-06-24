@@ -5,6 +5,7 @@ export interface SiteSettingsDocument extends mongoose.Document {
   logoUrl?: string;
   supportPhone?: string;
   supportEmail?: string;
+  supportAddress?: string;
   updatedAt: Date;
 }
 
@@ -14,6 +15,7 @@ const SiteSettingsSchema = new Schema<SiteSettingsDocument>(
     logoUrl: { type: String },
     supportPhone: { type: String },
     supportEmail: { type: String },
+    supportAddress: { type: String },
   },
   { timestamps: true }
 );

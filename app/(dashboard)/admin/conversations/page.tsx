@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Plus, MessageCircle } from "lucide-react";
+import { Plus, MessageCircle, MoreVertical, Lock, LockOpen, Trash2 } from "lucide-react";
 import { useFetch } from "@/hooks/useFetch";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -45,6 +45,9 @@ export default function AdminConversationsPage() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [deletingConv, setDeletingConv] = useState<IConversation | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data, isLoading, refetch } = useFetch<ConversationsResponse>(
     "/api/conversations"
@@ -62,6 +65,16 @@ export default function AdminConversationsPage() {
   } = useForm<ConvForm>({
     resolver: zodResolver(createConversationSchema),
   });
+
+  useEffect(() => {
+    function handleClickOutside() {
+      setOpenMenuId(null);
+    }
+    if (openMenuId) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [openMenuId]);
 
   function openModal() {
     reset({ subject: "", text: "" });
@@ -88,6 +101,45 @@ export default function AdminConversationsPage() {
       toast.error(err instanceof Error ? err.message : "Une erreur est survenue");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function toggleStatus(conv: IConversation, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpenMenuId(null);
+    try {
+      const newStatus = conv.status === "open" ? "closed" : "open";
+      const res = await fetch(`/api/conversations/${conv._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success(newStatus === "closed" ? "Discussion fermée" : "Discussion réouverte");
+      refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Une erreur est survenue");
+    }
+  }
+
+  async function handleDelete() {
+    if (!deletingConv) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/conversations/${deletingConv._id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success("Discussion supprimée définitivement");
+      setDeletingConv(null);
+      refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Une erreur est survenue");
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -137,7 +189,7 @@ export default function AdminConversationsPage() {
                   key={conv._id}
                   href={`/admin/conversations/${conv._id}`}
                   className={cn(
-                    "flex items-start gap-3 border-b border-[var(--border-color)] p-4 last:border-0 hover:bg-[var(--background-muted)] transition-colors",
+                    "relative flex items-start gap-3 border-b border-[var(--border-color)] p-4 last:border-0 hover:bg-[var(--background-muted)] transition-colors",
                     conv.unreadCount > 0 && "bg-[var(--accent-soft)]/20"
                   )}
                 >
@@ -175,15 +227,63 @@ export default function AdminConversationsPage() {
                   </div>
 
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <Badge variant={conv.status === "open" ? "success" : "neutral"}>
-                      {conv.status === "open" ? "Ouverte" : "Fermée"}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge variant={conv.status === "open" ? "success" : "neutral"}>
+                        {conv.status === "open" ? "Ouverte" : "Fermée"}
+                      </Badge>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setOpenMenuId(openMenuId === conv._id ? null : conv._id);
+                        }}
+                        className="rounded-lg p-1 text-[var(--foreground-muted)] hover:bg-[var(--border-color)]"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                    </div>
                     {conv.unreadCount > 0 && (
                       <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--accent)] px-1.5 text-xs font-bold text-white">
                         {conv.unreadCount}
                       </span>
                     )}
                   </div>
+
+                  {openMenuId === conv._id && (
+                    <div
+                      className="absolute right-4 top-12 z-10 w-48 rounded-lg border border-[var(--border-color)] bg-[var(--background)] py-1 shadow-lg"
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      <button
+                        onClick={(e) => toggleStatus(conv, e)}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--background-muted)]"
+                      >
+                        {conv.status === "open" ? (
+                          <>
+                            <Lock className="h-4 w-4" />
+                            Fermer la discussion
+                          </>
+                        ) : (
+                          <>
+                            <LockOpen className="h-4 w-4" />
+                            Réouvrir la discussion
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setOpenMenuId(null);
+                          setDeletingConv(conv);
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--danger)] hover:bg-[var(--danger)]/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Supprimer définitivement
+                      </button>
+                    </div>
+                  )}
                 </Link>
               );
             })}
@@ -241,6 +341,30 @@ export default function AdminConversationsPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={!!deletingConv}
+        onClose={() => setDeletingConv(null)}
+        title="Supprimer la discussion"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-[var(--foreground-muted)]">
+            Cette action supprimera définitivement la discussion{" "}
+            <strong className="text-[var(--foreground)]">
+              {deletingConv?.subject}
+            </strong>{" "}
+            et tous ses messages. Cette action est irréversible.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeletingConv(null)}>
+              Annuler
+            </Button>
+            <Button variant="danger" onClick={handleDelete} isLoading={isDeleting}>
+              Supprimer définitivement
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

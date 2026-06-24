@@ -19,10 +19,14 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
+    const includeArchived = searchParams.get("includeArchived") === "true";
 
     const query: Record<string, unknown> = {};
     if (session.user.role !== "admin") {
       query.userId = session.user.id;
+      if (!includeArchived) {
+        query.archivedByUser = { $ne: true };
+      }
     }
 
     const total = await Conversation.countDocuments(query);
@@ -151,7 +155,7 @@ export async function POST(req: NextRequest) {
       const targetUser = await User.findById(targetUserId).select("name");
       await createNotification({
         userId: targetUserId,
-        type: "general",
+        type: "new_message",
         title: "Nouvelle discussion de l'administrateur",
         message: `L'administrateur a ouvert une discussion : "${data.subject}".`,
         link: "/user/conversations",
@@ -166,7 +170,7 @@ export async function POST(req: NextRequest) {
       });
     } else {
       await notifyAllAdmins({
-        type: "general",
+        type: "new_message",
         title: "Nouvelle discussion ouverte",
         message: `${session.user.name} a ouvert une discussion : "${data.subject}".`,
         link: "/admin/conversations",

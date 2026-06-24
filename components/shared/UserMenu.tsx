@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { toast } from "sonner";
-import { ChevronDown, Sun, Moon, Globe, UserCircle, LogOut, Download, Volume2, VolumeX } from "lucide-react";
+import { ChevronDown, Sun, Moon, Globe, UserCircle, LogOut, Download, Volume2, VolumeX, Phone } from "lucide-react";
 import { usePreferencesStore } from "@/lib/store/preferences";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
@@ -114,6 +114,17 @@ export function UserMenu() {
             <UserCircle className="h-4 w-4" />
             {t.nav.profile}
           </Link>
+
+          {session.user.role !== "admin" && (
+            <Link
+              href="/user/contact"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--background-muted)]"
+            >
+              <Phone className="h-4 w-4" />
+              Contacter l'administrateur
+            </Link>
+          )}
 
           <button
             onClick={toggleTheme}

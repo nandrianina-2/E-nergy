@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import { Conversation } from "@/lib/models";
-import { requireAuth, handleApiError, ApiError } from "@/lib/api-helpers";
+import { Conversation, Message } from "@/lib/models";
+import { requireAdmin, requireAuth, handleApiError, ApiError } from "@/lib/api-helpers";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -45,23 +45,58 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       throw new ApiError("Conversation introuvable", 404);
     }
 
-    if (
-      session.user.role !== "admin" &&
-      conversation.userId.toString() !== session.user.id
-    ) {
+    const isOwner = conversation.userId.toString() === session.user.id;
+    if (session.user.role !== "admin" && !isOwner) {
       throw new ApiError("Accès refusé", 403);
     }
 
     const body = await req.json();
-    if (body.status) {
+
+    if (body.status !== undefined) {
       if (session.user.role !== "admin") {
-        throw new ApiError("Seul l'admin peut fermer une conversation", 403);
+        throw new ApiError(
+          "Seul l'admin peut ouvrir ou fermer une conversation",
+          403
+        );
       }
       conversation.status = body.status;
-      await conversation.save();
     }
 
+    if (body.archivedByUser !== undefined) {
+      // L'archivage est une préférence personnelle : seul le propriétaire
+      // de la conversation (ou l'admin pour dépannage) peut la modifier.
+      if (session.user.role !== "admin" && !isOwner) {
+        throw new ApiError("Accès refusé", 403);
+      }
+      conversation.archivedByUser = !!body.archivedByUser;
+    }
+
+    await conversation.save();
+
     return NextResponse.json({ conversation });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: Params) {
+  try {
+    // Suppression définitive réservée à l'admin (les utilisateurs archivent,
+    // ils ne suppriment pas, pour préserver l'historique en cas de litige
+    // sur un paiement).
+    await requireAdmin();
+    await connectDB();
+    const { id } = await params;
+
+    const conversation = await Conversation.findById(id);
+    if (!conversation) {
+      throw new ApiError("Conversation introuvable", 404);
+    }
+
+    await Message.deleteMany({ conversationId: id });
+    await Conversation.findByIdAndDelete(id);
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     return handleApiError(error);
   }

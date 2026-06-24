@@ -51,6 +51,7 @@ export default function AdminSettingsPage() {
           siteName: settingsData.settings.siteName,
           supportPhone: settingsData.settings.supportPhone || "",
           supportEmail: settingsData.settings.supportEmail || "",
+          supportAddress: settingsData.settings.supportAddress || "",
         }
       : undefined,
   });
@@ -200,6 +201,11 @@ export default function AdminSettingsPage() {
                   type="email"
                   error={siteErrors.supportEmail?.message}
                   {...registerSite("supportEmail")}
+                />
+                <Input
+                  label="Adresse"
+                  error={siteErrors.supportAddress?.message}
+                  {...registerSite("supportAddress")}
                 />
                 <div className="sm:col-span-2 flex justify-end">
                   <Button type="submit" isLoading={isSubmittingSite}>

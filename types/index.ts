@@ -13,7 +13,27 @@ export type NotificationType =
   | "payment_received"
   | "discrepancy_alert"
   | "account_created"
+  | "new_message"
   | "general";
+
+/** Types pour lesquels l'utilisateur peut personnaliser ses préférences. */
+export const CONFIGURABLE_NOTIFICATION_TYPES: NotificationType[] = [
+  "new_invoice",
+  "reading_reminder",
+  "payment_overdue",
+  "payment_received",
+  "new_message",
+  "general",
+];
+
+export interface NotificationChannelPrefs {
+  inApp: boolean;
+  email: boolean;
+}
+
+export type NotificationPreferences = Partial<
+  Record<NotificationType, NotificationChannelPrefs>
+>;
 
 export interface IUser {
   _id: string;
@@ -159,6 +179,7 @@ export interface ISiteSettings {
   logoUrl?: string;
   supportPhone?: string;
   supportEmail?: string;
+  supportAddress?: string;
   updatedAt: string;
 }
 
@@ -183,6 +204,7 @@ export interface IConversation {
   invoiceId?: string | IInvoice;
   subject: string;
   status: "open" | "closed";
+  archivedByUser: boolean;
   lastMessageAt: string;
   createdAt: string;
   updatedAt: string;

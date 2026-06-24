@@ -73,7 +73,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (session.user.role === "admin") {
       await createNotification({
         userId: conversation.userId.toString(),
-        type: "general",
+        type: "new_message",
         title: "Nouvelle réponse de l'administrateur",
         message: data.text
           ? data.text.slice(0, 100)
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       });
     } else {
       await notifyAllAdmins({
-        type: "general",
+        type: "new_message",
         title: "Nouveau message dans une discussion",
         message: data.text
           ? data.text.slice(0, 100)

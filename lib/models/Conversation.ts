@@ -5,6 +5,7 @@ export interface ConversationDocument extends mongoose.Document {
   invoiceId?: mongoose.Types.ObjectId; // absent = conversation générale
   subject: string;
   status: "open" | "closed";
+  archivedByUser: boolean;
   lastMessageAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -16,6 +17,7 @@ const ConversationSchema = new Schema<ConversationDocument>(
     invoiceId: { type: Schema.Types.ObjectId, ref: "Invoice" },
     subject: { type: String, required: true },
     status: { type: String, enum: ["open", "closed"], default: "open" },
+    archivedByUser: { type: Boolean, default: false },
     lastMessageAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

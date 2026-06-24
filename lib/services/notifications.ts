@@ -1,7 +1,7 @@
 import { connectDB } from "@/lib/db";
 import { Notification, User } from "@/lib/models";
 import { sendEmail } from "@/lib/services/email";
-import { NotificationType } from "@/types";
+import { NotificationType, NotificationChannelPrefs } from "@/types";
 
 interface CreateNotificationParams {
   userId: string;
@@ -13,29 +13,66 @@ interface CreateNotificationParams {
   emailHtml?: string;
 }
 
+// Types toujours actifs, non désactivables par l'utilisateur : sécurité du
+// compte (bienvenue) et alerte technique critique (écart de consommation
+// anormal, potentiellement signe d'une fuite ou d'un vol d'électricité).
+const NON_CONFIGURABLE_TYPES: NotificationType[] = [
+  "account_created",
+  "discrepancy_alert",
+];
+
+const DEFAULT_CHANNEL_PREFS: NotificationChannelPrefs = {
+  inApp: true,
+  email: true,
+};
+
+function getChannelPrefs(
+  type: NotificationType,
+  preferences?: Record<string, { inApp: boolean; email: boolean }> | Map<string, { inApp: boolean; email: boolean }>
+): NotificationChannelPrefs {
+  if (NON_CONFIGURABLE_TYPES.includes(type)) {
+    return DEFAULT_CHANNEL_PREFS;
+  }
+  if (!preferences) return DEFAULT_CHANNEL_PREFS;
+
+  // Mongoose stocke les Map en mémoire comme de vraies Map, mais après un
+  // .lean() ou une sérialisation JSON elles deviennent des objets simples.
+  const prefsForType =
+    preferences instanceof Map ? preferences.get(type) : preferences[type];
+
+  return prefsForType || DEFAULT_CHANNEL_PREFS;
+}
+
 export async function createNotification(params: CreateNotificationParams) {
   await connectDB();
 
-  const notification = await Notification.create({
-    userId: params.userId,
-    type: params.type,
-    title: params.title,
-    message: params.message,
-    link: params.link,
-  });
+  const user = await User.findById(params.userId).select(
+    "email notificationPreferences"
+  );
 
-  if (params.sendEmailToo) {
-    const user = await User.findById(params.userId);
-    if (user?.email) {
-      try {
-        await sendEmail({
-          to: user.email,
-          subject: params.title,
-          html: params.emailHtml || `<p>${params.message}</p>`,
-        });
-      } catch (err) {
-        console.error("[notifications] Échec envoi email :", err);
-      }
+  const prefs = getChannelPrefs(params.type, user?.notificationPreferences);
+
+  let notification = null;
+
+  if (prefs.inApp) {
+    notification = await Notification.create({
+      userId: params.userId,
+      type: params.type,
+      title: params.title,
+      message: params.message,
+      link: params.link,
+    });
+  }
+
+  if (params.sendEmailToo && prefs.email && user?.email) {
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: params.title,
+        html: params.emailHtml || `<p>${params.message}</p>`,
+      });
+    } catch (err) {
+      console.error("[notifications] Échec envoi email :", err);
     }
   }
 

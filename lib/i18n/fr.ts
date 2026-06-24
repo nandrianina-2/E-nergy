@@ -49,6 +49,8 @@ const fr = {
     settings: "Paramètres",
     adminReadings: "Relevés",
     automations: "Automatisations",
+    contact: "Contact",
+    notificationSettings: "Préférences de notification",
   },
   auth: {
     login: "Connexion",
