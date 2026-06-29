@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import { Submeter, Reading } from "@/lib/models";
+import { Submeter, Reading, Organization } from "@/lib/models";
 import { requireCronSecretOrAdmin, handleApiError } from "@/lib/api-helpers";
 import { createNotification } from "@/lib/services/notifications";
 import { readingReminderEmailTemplate } from "@/lib/services/email";
@@ -31,7 +31,16 @@ export async function GET(req: Request) {
 
     const currentPeriod = getCurrentPeriod();
 
+    // Seules les organisations avec un abonnement actif/en essai reçoivent
+    // des rappels automatiques — pas celles suspendues ou expirées.
+    const activeOrgs = await Organization.find({
+      isActive: true,
+      subscriptionStatus: { $in: ["active", "trial"] },
+    }).select("_id");
+    const activeOrgIds = activeOrgs.map((o) => o._id);
+
     const submeters = await Submeter.find({
+      organizationId: { $in: activeOrgIds },
       isActive: true,
       userId: { $exists: true, $ne: null },
       lastReadingReminderPeriod: { $ne: currentPeriod },

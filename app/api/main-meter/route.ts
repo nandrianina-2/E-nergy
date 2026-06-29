@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import { MainMeter, Submeter, Reading } from "@/lib/models";
-import { requireAdmin, handleApiError } from "@/lib/api-helpers";
+import { MainMeter, Reading } from "@/lib/models";
+import {
+  requireOrgScopeStrict,
+  requireActiveSubscription,
+  handleApiError,
+} from "@/lib/api-helpers";
 import { createMainMeterSchema } from "@/lib/validations";
 import { checkDiscrepancy } from "@/lib/services/allocation";
 import { notifyAllAdmins } from "@/lib/services/notifications";
@@ -9,15 +13,16 @@ import { discrepancyAlertEmailTemplate } from "@/lib/services/email";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
 
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
 
-    const total = await MainMeter.countDocuments();
-    const mainMeters = await MainMeter.find()
+    const query = { organizationId };
+    const total = await MainMeter.countDocuments(query);
+    const mainMeters = await MainMeter.find(query)
       .sort({ periodStart: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
@@ -38,7 +43,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
+    await requireActiveSubscription(organizationId);
     await connectDB();
 
     const body = await req.json();
@@ -48,6 +54,7 @@ export async function POST(req: NextRequest) {
 
     const mainMeter = await MainMeter.create({
       ...data,
+      organizationId,
       consumption,
     });
 
@@ -56,7 +63,7 @@ export async function POST(req: NextRequest) {
       new Date(data.periodStart).getMonth() + 1
     ).padStart(2, "0")}`;
 
-    const readings = await Reading.find({ period: periodKey });
+    const readings = await Reading.find({ organizationId, period: periodKey });
     if (readings.length > 0) {
       const discrepancy = checkDiscrepancy(
         consumption,
@@ -81,6 +88,7 @@ export async function POST(req: NextRequest) {
             submetersTotal: discrepancy.submetersTotalConsumption,
             differencePercent: discrepancy.differencePercent,
           }),
+          organizationId,
         });
       }
     }

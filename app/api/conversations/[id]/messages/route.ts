@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Conversation, Message } from "@/lib/models";
-import { requireAuth, handleApiError, ApiError } from "@/lib/api-helpers";
+import { requireAuth, assertOrgAccess, handleApiError, ApiError } from "@/lib/api-helpers";
 import { sendMessageSchema } from "@/lib/validations";
 import { createNotification, notifyAllAdmins } from "@/lib/services/notifications";
 
@@ -10,18 +10,19 @@ interface Params {
 }
 
 async function assertConversationAccess(
-  session: { user: { role: string; id: string } },
+  session: { user: { role: string; id: string; organizationId?: string | null } },
   conversationId: string
 ) {
   const conversation = await Conversation.findById(conversationId);
   if (!conversation) {
     throw new ApiError("Conversation introuvable", 404);
   }
-  if (
-    session.user.role !== "admin" &&
-    conversation.userId.toString() !== session.user.id
-  ) {
+  const isStaff = session.user.role === "admin" || session.user.role === "super_admin";
+  if (!isStaff && conversation.userId.toString() !== session.user.id) {
     throw new ApiError("Accès refusé à cette conversation", 403);
+  }
+  if (session.user.role === "admin") {
+    assertOrgAccess(session, conversation.organizationId.toString(), "Conversation introuvable");
   }
   return conversation;
 }
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const message = await Message.create({
       conversationId: id,
       senderId: session.user.id,
-      senderRole: session.user.role,
+      senderRole: session.user.role === "super_admin" ? "admin" : session.user.role,
       text: data.text,
       imageUrl: data.imageUrl,
     });
@@ -69,8 +70,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
     await conversation.save();
 
-    // Notifie l'autre partie
-    if (session.user.role === "admin") {
+    // Notifie l'autre partie. Le super_admin est traité comme l'admin de
+    // l'organisation pour cette logique (il agit en tant que staff côté chat).
+    const isStaffSender =
+      session.user.role === "admin" || session.user.role === "super_admin";
+
+    if (isStaffSender) {
       await createNotification({
         userId: conversation.userId.toString(),
         type: "new_message",
@@ -88,6 +93,7 @@ export async function POST(req: NextRequest, { params }: Params) {
           ? data.text.slice(0, 100)
           : `Nouvelle image envoyée par ${session.user.name}`,
         link: `/admin/conversations/${conversation._id}`,
+        organizationId: conversation.organizationId.toString(),
       });
     }
 

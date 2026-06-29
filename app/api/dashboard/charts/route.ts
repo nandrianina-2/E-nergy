@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { Reading, Invoice, MainMeter } from "@/lib/models";
-import { requireAdmin, handleApiError } from "@/lib/api-helpers";
+import { requireOrgScopeStrict, handleApiError } from "@/lib/api-helpers";
 
 function getLastNPeriods(n: number): string[] {
   const periods: string[] = [];
@@ -15,7 +16,7 @@ function getLastNPeriods(n: number): string[] {
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
 
     const { searchParams } = new URL(req.url);
@@ -24,8 +25,9 @@ export async function GET(req: NextRequest) {
 
     const consumptionByPeriod = await Promise.all(
       periods.map(async (period) => {
-        const readings = await Reading.find({ period });
+        const readings = await Reading.find({ organizationId, period });
         const mainMeter = await MainMeter.findOne({
+          organizationId,
           periodStart: {
             $gte: new Date(`${period}-01`),
             $lt: new Date(
@@ -46,7 +48,7 @@ export async function GET(req: NextRequest) {
 
     const paymentsByPeriod = await Promise.all(
       periods.map(async (period) => {
-        const invoices = await Invoice.find({ period });
+        const invoices = await Invoice.find({ organizationId, period });
         const totalAmount = invoices.reduce((s, i) => s + i.totalAmount, 0);
         const paidAmount = invoices.reduce((s, i) => s + i.amountPaid, 0);
 
@@ -60,6 +62,7 @@ export async function GET(req: NextRequest) {
     );
 
     const paymentStatusBreakdown = await Invoice.aggregate([
+      { $match: { organizationId: new mongoose.Types.ObjectId(organizationId) } },
       { $group: { _id: "$paymentStatus", count: { $sum: 1 } } },
     ]);
 

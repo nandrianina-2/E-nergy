@@ -51,6 +51,7 @@ const mg = {
     automations: "Fandrindrana ho azy",
     contact: "Fifandraisana",
     notificationSettings: "Safidy fampahafantarana",
+    organizations: "Fikambanana",
   },
   auth: {
     login: "Hiditra",

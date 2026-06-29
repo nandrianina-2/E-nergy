@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       .populate("senderId", "name")
       .populate({
         path: "conversationId",
-        select: "userId subject",
+        select: "userId subject organizationId",
       })
       .limit(300); // garde-fou
 
@@ -38,10 +38,13 @@ export async function GET(req: Request) {
     }
 
     // Regroupe par destinataire : un admin qui a 5 messages en attente ne reçoit
-    // qu'un seul email récapitulatif, pas 5.
+    // qu'un seul email récapitulatif, pas 5. La clé pour un destinataire admin
+    // inclut l'organisation, pour ne jamais mélanger les messages de deux
+    // organisations différentes dans le même récapitulatif.
     interface PendingForRecipient {
-      recipientId: string;
       isAdminRecipient: boolean;
+      organizationId?: string;
+      userId?: string;
       items: { senderName: string; subject: string; preview: string }[];
       messageIds: string[];
     }
@@ -52,19 +55,24 @@ export async function GET(req: Request) {
         _id: string;
         userId: { toString(): string };
         subject: string;
+        organizationId: { toString(): string };
       } | null;
       if (!conversation) continue;
 
       // Le destinataire est l'autre partie : si le message vient de l'utilisateur,
-      // le destinataire est l'admin (on regroupe sous une clé virtuelle "admin"),
+      // le destinataire est l'ensemble des admins DE CETTE ORGANISATION,
       // sinon le destinataire est l'utilisateur propriétaire de la conversation.
       const isFromUser = msg.senderRole === "user";
-      const recipientKey = isFromUser ? "admin" : conversation.userId.toString();
+      const organizationId = conversation.organizationId.toString();
+      const recipientKey = isFromUser
+        ? `org:${organizationId}`
+        : `user:${conversation.userId.toString()}`;
 
       if (!byRecipient.has(recipientKey)) {
         byRecipient.set(recipientKey, {
-          recipientId: isFromUser ? "admin" : conversation.userId.toString(),
           isAdminRecipient: isFromUser,
+          organizationId: isFromUser ? organizationId : undefined,
+          userId: isFromUser ? undefined : conversation.userId.toString(),
           items: [],
           messageIds: [],
         });
@@ -85,9 +93,13 @@ export async function GET(req: Request) {
 
     for (const [recipientKey, pending] of byRecipient) {
       try {
-        if (pending.isAdminRecipient) {
-          // Tous les admins actifs reçoivent le récapitulatif
-          const admins = await User.find({ role: "admin", isActive: true });
+        if (pending.isAdminRecipient && pending.organizationId) {
+          // Seuls les admins DE CETTE ORGANISATION reçoivent le récapitulatif
+          const admins = await User.find({
+            role: "admin",
+            organizationId: pending.organizationId,
+            isActive: true,
+          });
           for (const admin of admins) {
             await sendEmail({
               to: admin.email,
@@ -107,8 +119,8 @@ export async function GET(req: Request) {
               }),
             });
           }
-        } else {
-          const user = await User.findById(pending.recipientId);
+        } else if (pending.userId) {
+          const user = await User.findById(pending.userId);
           if (!user) continue;
           await sendEmail({
             to: user.email,

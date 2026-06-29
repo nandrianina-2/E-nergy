@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Submeter, Reading } from "@/lib/models";
 import {
-  requireAdmin,
   requireAuth,
+  requireOrgScopeStrict,
   assertSubmeterAccess,
   handleApiError,
   ApiError,
@@ -30,6 +30,15 @@ export async function GET(req: NextRequest, { params }: Params) {
       throw new ApiError("Sous-compteur introuvable", 404);
     }
 
+    // Vérifie que ce sous-compteur appartient bien à l'organisation de l'admin
+    // (le super_admin, sans restriction, peut tout consulter).
+    if (
+      session.user.role === "admin" &&
+      submeter.organizationId.toString() !== session.user.organizationId
+    ) {
+      throw new ApiError("Sous-compteur introuvable", 404);
+    }
+
     return NextResponse.json({ submeter });
   } catch (error) {
     return handleApiError(error);
@@ -38,20 +47,20 @@ export async function GET(req: NextRequest, { params }: Params) {
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
     const { id } = await params;
 
     const body = await req.json();
     const data = updateSubmeterSchema.parse(body);
 
-    const submeter = await Submeter.findById(id);
+    const submeter = await Submeter.findOne({ _id: id, organizationId });
     if (!submeter) {
       throw new ApiError("Sous-compteur introuvable", 404);
     }
 
     if (data.code && data.code !== submeter.code) {
-      const existing = await Submeter.findOne({ code: data.code });
+      const existing = await Submeter.findOne({ organizationId, code: data.code });
       if (existing) {
         throw new ApiError("Un sous-compteur avec ce code existe déjà", 409);
       }
@@ -68,11 +77,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
 export async function DELETE(req: NextRequest, { params }: Params) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
     const { id } = await params;
 
-    const submeter = await Submeter.findById(id);
+    const submeter = await Submeter.findOne({ _id: id, organizationId });
     if (!submeter) {
       throw new ApiError("Sous-compteur introuvable", 404);
     }

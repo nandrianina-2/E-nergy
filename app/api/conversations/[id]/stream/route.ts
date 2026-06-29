@@ -25,11 +25,17 @@ export async function GET(req: NextRequest, { params }: Params) {
   if (!conversation) {
     return new Response("Conversation introuvable", { status: 404 });
   }
-  if (
-    session.user.role !== "admin" &&
-    conversation.userId.toString() !== session.user.id
-  ) {
+
+  const isStaff = session.user.role === "admin" || session.user.role === "super_admin";
+
+  if (!isStaff && conversation.userId.toString() !== session.user.id) {
     return new Response("Accès refusé", { status: 403 });
+  }
+  if (
+    session.user.role === "admin" &&
+    conversation.organizationId.toString() !== session.user.organizationId
+  ) {
+    return new Response("Conversation introuvable", { status: 404 });
   }
 
   // Dernier message déjà connu côté client, pour ne renvoyer que les nouveaux

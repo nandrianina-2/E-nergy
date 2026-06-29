@@ -1,4 +1,5 @@
 export { User } from "./User";
+export { Organization } from "./Organization";
 export { Submeter } from "./Submeter";
 export { MainMeter } from "./MainMeter";
 export { Reading } from "./Reading";
@@ -12,6 +13,7 @@ export { Conversation } from "./Conversation";
 export { Message } from "./Message";
 
 export type { UserDocument } from "./User";
+export type { OrganizationDocument, SubscriptionStatus } from "./Organization";
 export type { SubmeterDocument } from "./Submeter";
 export type { MainMeterDocument } from "./MainMeter";
 export type { ReadingDocument } from "./Reading";

@@ -4,6 +4,7 @@ import { Invoice } from "@/lib/models";
 import {
   requireAuth,
   assertSubmeterAccess,
+  assertOrgAccess,
   handleApiError,
   ApiError,
 } from "@/lib/api-helpers";
@@ -32,6 +33,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     }
 
     assertSubmeterAccess(session, invoice.submeterId._id.toString());
+    assertOrgAccess(session, invoice.organizationId.toString(), "Facture introuvable");
 
     const submeter = invoice.submeterId as unknown as {
       code: string;

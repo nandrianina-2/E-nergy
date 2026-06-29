@@ -22,11 +22,23 @@ export async function GET(req: NextRequest) {
     const includeArchived = searchParams.get("includeArchived") === "true";
 
     const query: Record<string, unknown> = {};
-    if (session.user.role !== "admin") {
+
+    if (session.user.role === "user") {
       query.userId = session.user.id;
       if (!includeArchived) {
         query.archivedByUser = { $ne: true };
       }
+    } else if (session.user.role === "admin") {
+      if (!session.user.organizationId) {
+        return NextResponse.json({
+          conversations: [],
+          pagination: { total: 0, page: 1, limit, totalPages: 0 },
+        });
+      }
+      query.organizationId = session.user.organizationId;
+    } else if (session.user.role === "super_admin") {
+      const requestedOrgId = searchParams.get("organizationId");
+      if (requestedOrgId) query.organizationId = requestedOrgId;
     }
 
     const total = await Conversation.countDocuments(query);
@@ -38,12 +50,13 @@ export async function GET(req: NextRequest) {
       .limit(limit);
 
     // Compte les messages non lus par conversation (du point de vue du rôle courant)
+    const isStaff = session.user.role === "admin" || session.user.role === "super_admin";
     const unreadCounts = await Message.aggregate([
       {
         $match: {
           conversationId: { $in: conversations.map((c) => c._id) },
           isRead: false,
-          senderRole: session.user.role === "admin" ? "user" : "admin",
+          senderRole: isStaff ? "user" : "admin",
         },
       },
       { $group: { _id: "$conversationId", count: { $sum: 1 } } },
@@ -77,26 +90,32 @@ export async function POST(req: NextRequest) {
     const session = await requireAuth();
     await connectDB();
 
+    const isStaff = session.user.role === "admin" || session.user.role === "super_admin";
+
+    // Détermine l'organisation cible : pour un admin, toujours la sienne ;
+    // pour le super_admin, déduite de l'utilisateur/facture ciblé.
+    let organizationId: string | null =
+      session.user.role !== "super_admin" ? session.user.organizationId || null : null;
+
     const body = await req.json();
     const data = createConversationSchema.parse(body);
-
-    const isAdmin = session.user.role === "admin";
 
     // Si une facture est précisée, on récupère le sous-compteur/utilisateur propriétaire
     let invoice = null;
     if (data.invoiceId) {
-      invoice = await Invoice.findById(data.invoiceId).populate(
-        "submeterId",
-        "userId"
-      );
+      const invoiceQuery: Record<string, unknown> = { _id: data.invoiceId };
+      if (organizationId) invoiceQuery.organizationId = organizationId;
+
+      invoice = await Invoice.findOne(invoiceQuery).populate("submeterId", "userId");
       if (!invoice) {
         throw new ApiError("Facture introuvable", 404);
       }
+      if (!organizationId) organizationId = invoice.organizationId.toString();
     }
 
     // Détermine l'utilisateur cible de la conversation
     let targetUserId = session.user.id;
-    if (isAdmin) {
+    if (isStaff) {
       if (invoice) {
         // L'utilisateur cible est déduit automatiquement du sous-compteur de la facture
         const submeter = invoice.submeterId as unknown as { userId?: string };
@@ -108,9 +127,15 @@ export async function POST(req: NextRequest) {
         }
         targetUserId = submeter.userId.toString();
       } else if (data.userId) {
-        const targetUser = await User.findById(data.userId);
+        const userQuery: Record<string, unknown> = { _id: data.userId };
+        if (organizationId) userQuery.organizationId = organizationId;
+
+        const targetUser = await User.findOne(userQuery);
         if (!targetUser) {
           throw new ApiError("Utilisateur introuvable", 404);
+        }
+        if (!organizationId && targetUser.organizationId) {
+          organizationId = targetUser.organizationId.toString();
         }
         targetUserId = data.userId;
       } else {
@@ -121,6 +146,13 @@ export async function POST(req: NextRequest) {
       }
     } else if (invoice) {
       assertSubmeterAccess(session, invoice.submeterId._id.toString());
+    }
+
+    if (!organizationId) {
+      throw new ApiError(
+        "Impossible de déterminer l'organisation cible de cette discussion",
+        400
+      );
     }
 
     if (invoice) {
@@ -135,6 +167,7 @@ export async function POST(req: NextRequest) {
     }
 
     const conversation = await Conversation.create({
+      organizationId,
       userId: targetUserId,
       invoiceId: data.invoiceId,
       subject: data.subject,
@@ -145,13 +178,13 @@ export async function POST(req: NextRequest) {
       await Message.create({
         conversationId: conversation._id,
         senderId: session.user.id,
-        senderRole: session.user.role,
+        senderRole: isStaff ? "admin" : "user",
         text: data.text,
         imageUrl: data.imageUrl,
       });
     }
 
-    if (isAdmin) {
+    if (isStaff) {
       const targetUser = await User.findById(targetUserId).select("name");
       await createNotification({
         userId: targetUserId,
@@ -174,6 +207,7 @@ export async function POST(req: NextRequest) {
         title: "Nouvelle discussion ouverte",
         message: `${session.user.name} a ouvert une discussion : "${data.subject}".`,
         link: "/admin/conversations",
+        organizationId,
       });
     }
 

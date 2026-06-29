@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Reading } from "@/lib/models";
-import { requireAdmin, handleApiError } from "@/lib/api-helpers";
+import { requireOrgScopeStrict, handleApiError } from "@/lib/api-helpers";
 import { checkDiscrepancy } from "@/lib/services/allocation";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
 
     const { searchParams } = new URL(req.url);
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const readings = await Reading.find({ period });
+    const readings = await Reading.find({ organizationId, period });
 
     const discrepancy = checkDiscrepancy(
       mainMeterConsumption,

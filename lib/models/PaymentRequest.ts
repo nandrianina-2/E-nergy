@@ -1,6 +1,7 @@
 import mongoose, { Schema, Model, models } from "mongoose";
 
 export interface PaymentRequestDocument extends mongoose.Document {
+  organizationId: mongoose.Types.ObjectId;
   invoiceId: mongoose.Types.ObjectId;
   submeterId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
@@ -16,6 +17,11 @@ export interface PaymentRequestDocument extends mongoose.Document {
 
 const PaymentRequestSchema = new Schema<PaymentRequestDocument>(
   {
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: "Organization",
+      required: true,
+    },
     invoiceId: { type: Schema.Types.ObjectId, ref: "Invoice", required: true },
     submeterId: {
       type: Schema.Types.ObjectId,
@@ -41,7 +47,7 @@ const PaymentRequestSchema = new Schema<PaymentRequestDocument>(
   { timestamps: true }
 );
 
-PaymentRequestSchema.index({ status: 1 });
+PaymentRequestSchema.index({ organizationId: 1, status: 1 });
 PaymentRequestSchema.index({ invoiceId: 1 });
 PaymentRequestSchema.index({ userId: 1 });
 

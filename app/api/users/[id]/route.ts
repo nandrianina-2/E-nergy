@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { User, Submeter } from "@/lib/models";
-import { requireAdmin, handleApiError, ApiError } from "@/lib/api-helpers";
+import { requireOrgScopeStrict, handleApiError, ApiError } from "@/lib/api-helpers";
 import { updateUserSchema } from "@/lib/validations";
 
 interface Params {
@@ -10,11 +10,14 @@ interface Params {
 
 export async function GET(req: NextRequest, { params }: Params) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
     const { id } = await params;
 
-    const user = await User.findById(id).populate("submeterId", "code label");
+    const user = await User.findOne({ _id: id, organizationId }).populate(
+      "submeterId",
+      "code label"
+    );
     if (!user) {
       throw new ApiError("Utilisateur introuvable", 404);
     }
@@ -27,14 +30,20 @@ export async function GET(req: NextRequest, { params }: Params) {
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
     const { id } = await params;
 
     const body = await req.json();
     const data = updateUserSchema.parse(body);
 
-    const user = await User.findById(id);
+    // Un admin ne peut jamais modifier le rôle ou l'organisation d'un compte
+    // via cette route — ce levier est réservé au super-admin, pour éviter
+    // qu'un admin ne s'auto-promeuve ou ne transfère un utilisateur ailleurs.
+    delete (data as Record<string, unknown>).role;
+    delete (data as Record<string, unknown>).organizationId;
+
+    const user = await User.findOne({ _id: id, organizationId, role: "user" });
     if (!user) {
       throw new ApiError("Utilisateur introuvable", 404);
     }
@@ -49,7 +58,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       }
       // Assigne le nouveau
       if (data.submeterId) {
-        const newSubmeter = await Submeter.findById(data.submeterId);
+        const newSubmeter = await Submeter.findOne({
+          _id: data.submeterId,
+          organizationId,
+        });
         if (!newSubmeter) {
           throw new ApiError("Sous-compteur introuvable", 404);
         }
@@ -84,11 +96,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
 export async function DELETE(req: NextRequest, { params }: Params) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
     const { id } = await params;
 
-    const user = await User.findById(id);
+    const user = await User.findOne({ _id: id, organizationId, role: "user" });
     if (!user) {
       throw new ApiError("Utilisateur introuvable", 404);
     }

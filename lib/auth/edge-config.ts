@@ -14,6 +14,7 @@ export const { auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
+        token.organizationId = (user as any).organizationId;
         token.submeterId = (user as any).submeterId;
       }
       return token;
@@ -22,6 +23,7 @@ export const { auth } = NextAuth({
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
+        (session.user as any).organizationId = token.organizationId;
         (session.user as any).submeterId = token.submeterId;
       }
       return session;

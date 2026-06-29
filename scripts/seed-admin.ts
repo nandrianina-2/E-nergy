@@ -1,5 +1,8 @@
 /**
- * Script de seed : crée le premier compte administrateur.
+ * Script de seed : crée le premier compte super-administrateur.
+ * Le super-admin n'appartient à aucune organisation : il supervise toutes
+ * les organisations (chaque admin gère ensuite son propre immeuble/compteur).
+ *
  * Utilisation : npx tsx scripts/seed-admin.ts
  */
 import mongoose from "mongoose";
@@ -13,7 +16,8 @@ const UserSchema = new mongoose.Schema(
     name: String,
     email: { type: String, unique: true },
     password: String,
-    role: { type: String, enum: ["admin", "user"], default: "user" },
+    role: { type: String, enum: ["super_admin", "admin", "user"], default: "user" },
+    organizationId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization" },
     isActive: { type: Boolean, default: true },
     language: { type: String, default: "fr" },
     theme: { type: String, default: "light" },
@@ -44,16 +48,22 @@ async function main() {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   await User.create({
-    name: "Administrateur",
+    name: "Administrateur principal",
     email,
     password: hashedPassword,
-    role: "admin",
+    role: "super_admin",
     isActive: true,
   });
 
-  console.log("Compte administrateur créé avec succès :");
+  console.log("Compte super-administrateur créé avec succès :");
   console.log(`  Email    : ${email}`);
   console.log(`  Mot de passe : ${password}`);
+  console.log("");
+  console.log("Ce compte n'appartient à aucune organisation : il supervise");
+  console.log("toutes les organisations depuis /super-admin/organizations.");
+  console.log("Créez-y votre première organisation (ou celle d'un autre admin)");
+  console.log("pour commencer à gérer des compteurs et des locataires.");
+  console.log("");
   console.log("Pensez à changer ce mot de passe après la première connexion.");
 
   await mongoose.disconnect();

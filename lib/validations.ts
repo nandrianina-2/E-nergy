@@ -150,3 +150,31 @@ export const updateNotificationPreferencesSchema = z.object({
     })
   ),
 });
+
+// ─── Super-admin : gestion des organisations et de leurs administrateurs ───
+
+export const createOrganizationSchema = z.object({
+  organizationName: z.string().min(2, "Le nom de l'organisation est requis"),
+  monthlyFee: z.number().min(0).default(0),
+  subscriptionStatus: z
+    .enum(["active", "trial", "suspended", "expired"])
+    .default("trial"),
+  // Compte admin créé en même temps que l'organisation
+  adminName: z.string().min(2, "Le nom de l'administrateur est requis"),
+  adminEmail: z.string().email("Email invalide"),
+  adminPassword: z
+    .string()
+    .min(6, "Le mot de passe doit contenir au moins 6 caractères"),
+  adminPhone: z.string().optional(),
+});
+
+export const updateOrganizationSchema = z.object({
+  name: z.string().min(2).optional(),
+  monthlyFee: z.number().min(0).optional(),
+  subscriptionStatus: z
+    .enum(["active", "trial", "suspended", "expired"])
+    .optional(),
+  subscriptionExpiresAt: z.string().nullable().optional(),
+  notes: z.string().optional(),
+  isActive: z.boolean().optional(),
+});

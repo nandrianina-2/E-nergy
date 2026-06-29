@@ -51,6 +51,7 @@ const fr = {
     automations: "Automatisations",
     contact: "Contact",
     notificationSettings: "Préférences de notification",
+    organizations: "Organisations",
   },
   auth: {
     login: "Connexion",

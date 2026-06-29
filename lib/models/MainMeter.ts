@@ -1,6 +1,7 @@
 import mongoose, { Schema, Model, models } from "mongoose";
 
 export interface MainMeterDocument extends mongoose.Document {
+  organizationId: mongoose.Types.ObjectId;
   invoiceNumber: string;
   oldIndex: number;
   newIndex: number;
@@ -22,6 +23,11 @@ export interface MainMeterDocument extends mongoose.Document {
 
 const MainMeterSchema = new Schema<MainMeterDocument>(
   {
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: "Organization",
+      required: true,
+    },
     invoiceNumber: { type: String, required: true, trim: true },
     oldIndex: { type: Number, required: true },
     newIndex: { type: Number, required: true },
@@ -49,8 +55,8 @@ const MainMeterSchema = new Schema<MainMeterDocument>(
   { timestamps: true }
 );
 
-MainMeterSchema.index({ periodStart: -1 });
-MainMeterSchema.index({ status: 1 });
+MainMeterSchema.index({ organizationId: 1, periodStart: -1 });
+MainMeterSchema.index({ organizationId: 1, status: 1 });
 
 export const MainMeter: Model<MainMeterDocument> =
   (models.MainMeter as Model<MainMeterDocument>) ||

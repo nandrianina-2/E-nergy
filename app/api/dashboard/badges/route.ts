@@ -13,13 +13,16 @@ export async function GET() {
       isRead: false,
     });
 
-    if (session.user.role === "admin") {
+    if (session.user.role === "admin" && session.user.organizationId) {
+      const organizationId = session.user.organizationId;
+
       const pendingPaymentRequests = await PaymentRequest.countDocuments({
+        organizationId,
         status: "pending",
       });
 
       // Conversations admin ayant au moins un message non lu envoyé par un utilisateur
-      const conversations = await Conversation.find().select("_id");
+      const conversations = await Conversation.find({ organizationId }).select("_id");
       const unreadConvCount = await Message.aggregate([
         {
           $match: {
@@ -39,7 +42,13 @@ export async function GET() {
       });
     }
 
-    // Côté utilisateur : conversations avec message non lu envoyé par l'admin
+    if (session.user.role === "super_admin") {
+      // Le super_admin n'a pas d'organisation : badges limités aux notifications
+      // qui lui sont directement adressées.
+      return NextResponse.json({ notifications: unreadNotifications, conversations: 0 });
+    }
+
+    // Côté utilisateur final : conversations avec message non lu envoyé par l'admin
     const userConversations = await Conversation.find({
       userId: session.user.id,
     }).select("_id");

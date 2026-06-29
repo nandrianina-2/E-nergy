@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Conversation, Message } from "@/lib/models";
-import { requireAdmin, requireAuth, handleApiError, ApiError } from "@/lib/api-helpers";
+import {
+  requireAdmin,
+  requireAuth,
+  assertOrgAccess,
+  handleApiError,
+  ApiError,
+} from "@/lib/api-helpers";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -21,12 +27,13 @@ export async function GET(req: NextRequest, { params }: Params) {
       throw new ApiError("Conversation introuvable", 404);
     }
 
-    if (
-      session.user.role !== "admin" &&
-      conversation.userId._id?.toString() !== session.user.id
-    ) {
+    const isStaff = session.user.role === "admin" || session.user.role === "super_admin";
+
+    if (!isStaff && conversation.userId._id?.toString() !== session.user.id) {
       throw new ApiError("Accès refusé à cette conversation", 403);
     }
+
+    assertOrgAccess(session, conversation.organizationId.toString(), "Conversation introuvable");
 
     return NextResponse.json({ conversation });
   } catch (error) {
@@ -45,15 +52,20 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       throw new ApiError("Conversation introuvable", 404);
     }
 
+    const isStaff = session.user.role === "admin" || session.user.role === "super_admin";
     const isOwner = conversation.userId.toString() === session.user.id;
-    if (session.user.role !== "admin" && !isOwner) {
+
+    if (!isStaff && !isOwner) {
       throw new ApiError("Accès refusé", 403);
+    }
+    if (isStaff && session.user.role === "admin") {
+      assertOrgAccess(session, conversation.organizationId.toString(), "Conversation introuvable");
     }
 
     const body = await req.json();
 
     if (body.status !== undefined) {
-      if (session.user.role !== "admin") {
+      if (!isStaff) {
         throw new ApiError(
           "Seul l'admin peut ouvrir ou fermer une conversation",
           403
@@ -65,7 +77,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (body.archivedByUser !== undefined) {
       // L'archivage est une préférence personnelle : seul le propriétaire
       // de la conversation (ou l'admin pour dépannage) peut la modifier.
-      if (session.user.role !== "admin" && !isOwner) {
+      if (!isStaff && !isOwner) {
         throw new ApiError("Accès refusé", 403);
       }
       conversation.archivedByUser = !!body.archivedByUser;
@@ -84,7 +96,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     // Suppression définitive réservée à l'admin (les utilisateurs archivent,
     // ils ne suppriment pas, pour préserver l'historique en cas de litige
     // sur un paiement).
-    await requireAdmin();
+    const session = await requireAdmin();
     await connectDB();
     const { id } = await params;
 
@@ -92,6 +104,8 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     if (!conversation) {
       throw new ApiError("Conversation introuvable", 404);
     }
+
+    assertOrgAccess(session, conversation.organizationId.toString(), "Conversation introuvable");
 
     await Message.deleteMany({ conversationId: id });
     await Conversation.findByIdAndDelete(id);

@@ -30,10 +30,21 @@ export async function GET(req: NextRequest) {
 
     const query: Record<string, unknown> = {};
 
-    if (session.user.role !== "admin") {
+    if (session.user.role === "user") {
       query.userId = session.user.id;
-    } else if (status) {
-      query.status = status;
+    } else if (session.user.role === "admin") {
+      if (!session.user.organizationId) {
+        return NextResponse.json({
+          paymentRequests: [],
+          pagination: { total: 0, page: 1, limit, totalPages: 0 },
+        });
+      }
+      query.organizationId = session.user.organizationId;
+      if (status) query.status = status;
+    } else if (session.user.role === "super_admin") {
+      const requestedOrgId = searchParams.get("organizationId");
+      if (requestedOrgId) query.organizationId = requestedOrgId;
+      if (status) query.status = status;
     }
 
     const total = await PaymentRequest.countDocuments(query);
@@ -64,10 +75,21 @@ export async function POST(req: NextRequest) {
     const session = await requireAuth();
     await connectDB();
 
+    if (!session.user.organizationId) {
+      throw new ApiError(
+        "Votre compte n'est rattaché à aucune organisation",
+        403
+      );
+    }
+    const organizationId = session.user.organizationId;
+
     const body = await req.json();
     const data = createPaymentRequestSchema.parse(body);
 
-    const invoice = await Invoice.findById(data.invoiceId);
+    const invoice = await Invoice.findOne({
+      _id: data.invoiceId,
+      organizationId,
+    });
     if (!invoice) {
       throw new ApiError("Facture introuvable", 404);
     }
@@ -92,6 +114,7 @@ export async function POST(req: NextRequest) {
     const remainingAmount = invoice.totalAmount - invoice.amountPaid;
 
     const paymentRequest = await PaymentRequest.create({
+      organizationId,
       invoiceId: invoice._id,
       submeterId: invoice.submeterId,
       userId: session.user.id,
@@ -109,6 +132,7 @@ export async function POST(req: NextRequest) {
         operatorLabels[data.method]
       }. Validation requise.`,
       link: "/admin/payment-requests",
+      organizationId,
     });
 
     return NextResponse.json({ paymentRequest }, { status: 201 });

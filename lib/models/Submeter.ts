@@ -1,6 +1,7 @@
 import mongoose, { Schema, Model, models } from "mongoose";
 
 export interface SubmeterDocument extends mongoose.Document {
+  organizationId: mongoose.Types.ObjectId;
   code: string;
   label: string;
   userId?: mongoose.Types.ObjectId;
@@ -13,7 +14,12 @@ export interface SubmeterDocument extends mongoose.Document {
 
 const SubmeterSchema = new Schema<SubmeterDocument>(
   {
-    code: { type: String, required: true, unique: true, trim: true },
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: "Organization",
+      required: true,
+    },
+    code: { type: String, required: true, trim: true },
     label: { type: String, required: true, trim: true },
     userId: { type: Schema.Types.ObjectId, ref: "User" },
     initialIndex: { type: Number, required: true, default: 0 },
@@ -23,8 +29,10 @@ const SubmeterSchema = new Schema<SubmeterDocument>(
   { timestamps: true }
 );
 
-SubmeterSchema.index({ code: 1 });
-SubmeterSchema.index({ userId: 1 });
+// Le code doit être unique au sein d'une organisation, mais deux organisations
+// différentes peuvent réutiliser le même code (ex: "SM-001" chacune chez elles).
+SubmeterSchema.index({ organizationId: 1, code: 1 }, { unique: true });
+SubmeterSchema.index({ organizationId: 1, userId: 1 });
 
 export const Submeter: Model<SubmeterDocument> =
   (models.Submeter as Model<SubmeterDocument>) ||

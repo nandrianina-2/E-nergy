@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Submeter } from "@/lib/models";
-import { requireAdmin, requireAuth, handleApiError } from "@/lib/api-helpers";
+import {
+  requireAuth,
+  requireOrgScopeStrict,
+  requireActiveSubscription,
+  handleApiError,
+  ApiError,
+} from "@/lib/api-helpers";
 import { createSubmeterSchema } from "@/lib/validations";
 
 export async function GET(req: NextRequest) {
@@ -14,9 +20,10 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
 
-    // Un utilisateur normal ne peut voir que son propre sous-compteur
     const query: Record<string, unknown> = {};
-    if (session.user.role !== "admin") {
+
+    if (session.user.role === "user") {
+      // Un utilisateur normal ne peut voir que son propre sous-compteur
       if (!session.user.submeterId) {
         return NextResponse.json({
           submeters: [],
@@ -24,11 +31,30 @@ export async function GET(req: NextRequest) {
         });
       }
       query._id = session.user.submeterId;
-    } else if (search) {
-      query.$or = [
-        { code: { $regex: search, $options: "i" } },
-        { label: { $regex: search, $options: "i" } },
-      ];
+    } else if (session.user.role === "admin") {
+      if (!session.user.organizationId) {
+        return NextResponse.json({
+          submeters: [],
+          pagination: { total: 0, page: 1, limit, totalPages: 0 },
+        });
+      }
+      query.organizationId = session.user.organizationId;
+      if (search) {
+        query.$or = [
+          { code: { $regex: search, $options: "i" } },
+          { label: { $regex: search, $options: "i" } },
+        ];
+      }
+    } else if (session.user.role === "super_admin") {
+      // Le super_admin peut filtrer sur une organisation précise, ou tout voir
+      const requestedOrgId = searchParams.get("organizationId");
+      if (requestedOrgId) query.organizationId = requestedOrgId;
+      if (search) {
+        query.$or = [
+          { code: { $regex: search, $options: "i" } },
+          { label: { $regex: search, $options: "i" } },
+        ];
+      }
     }
 
     const total = await Submeter.countDocuments(query);
@@ -54,21 +80,19 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
+    await requireActiveSubscription(organizationId);
     await connectDB();
 
     const body = await req.json();
     const data = createSubmeterSchema.parse(body);
 
-    const existing = await Submeter.findOne({ code: data.code });
+    const existing = await Submeter.findOne({ organizationId, code: data.code });
     if (existing) {
-      return NextResponse.json(
-        { error: "Un sous-compteur avec ce code existe déjà" },
-        { status: 409 }
-      );
+      throw new ApiError("Un sous-compteur avec ce code existe déjà", 409);
     }
 
-    const submeter = await Submeter.create(data);
+    const submeter = await Submeter.create({ ...data, organizationId });
 
     return NextResponse.json({ submeter }, { status: 201 });
   } catch (error) {

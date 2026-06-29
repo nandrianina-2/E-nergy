@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { PaymentRequest, Invoice, Payment } from "@/lib/models";
-import { requireAdmin, handleApiError, ApiError } from "@/lib/api-helpers";
+import { requireOrgScopeStrict, handleApiError, ApiError } from "@/lib/api-helpers";
 import { reviewPaymentRequestSchema } from "@/lib/validations";
 import { createNotification } from "@/lib/services/notifications";
 import { paymentDecisionEmailTemplate } from "@/lib/services/email";
@@ -20,17 +20,17 @@ const methodMap: Record<string, "cash" | "transfer" | "mobile_money" | "other"> 
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    const session = await requireAdmin();
+    const { session, organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
     const { id } = await params;
 
     const body = await req.json();
     const data = reviewPaymentRequestSchema.parse(body);
 
-    const paymentRequest = await PaymentRequest.findById(id).populate(
-      "userId",
-      "name email"
-    );
+    const paymentRequest = await PaymentRequest.findOne({
+      _id: id,
+      organizationId,
+    }).populate("userId", "name email");
     if (!paymentRequest) {
       throw new ApiError("Demande de paiement introuvable", 404);
     }
@@ -60,6 +60,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     if (data.decision === "approved") {
       await Payment.create({
+        organizationId,
         invoiceId: invoice._id,
         submeterId: invoice.submeterId,
         amount: paymentRequest.amount,

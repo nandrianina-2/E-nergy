@@ -21,11 +21,21 @@ import {
   Settings,
   Workflow,
   Phone,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useSidebarBadges } from "@/hooks/useSidebarBadges";
+
+const superAdminLinks = [
+  {
+    href: "/super-admin/organizations",
+    labelKey: "organizations",
+    icon: Building2,
+  },
+  { href: "/super-admin/notifications", labelKey: "notifications", icon: Bell },
+];
 
 const adminLinks = [
   { href: "/admin/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
@@ -85,7 +95,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { siteName, logoUrl } = useSiteSettings();
   const { badges } = useSidebarBadges();
 
-  const links = session?.user?.role === "admin" ? adminLinks : userLinks;
+  const links =
+    session?.user?.role === "super_admin"
+      ? superAdminLinks
+      : session?.user?.role === "admin"
+      ? adminLinks
+      : userLinks;
 
   return (
     <>
@@ -135,7 +150,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 link.labelKey;
               const badgeCount =
                 "badgeKey" in link && link.badgeKey
-                  ? badges[link.badgeKey] || 0
+                  ? (badges as unknown as Record<string, number>)[link.badgeKey as string] || 0
                   : 0;
 
               return (

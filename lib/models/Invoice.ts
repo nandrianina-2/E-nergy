@@ -1,6 +1,7 @@
 import mongoose, { Schema, Model, models } from "mongoose";
 
 export interface InvoiceDocument extends mongoose.Document {
+  organizationId: mongoose.Types.ObjectId;
   invoiceNumber: string;
   submeterId: mongoose.Types.ObjectId;
   readingId: mongoose.Types.ObjectId;
@@ -23,7 +24,12 @@ export interface InvoiceDocument extends mongoose.Document {
 
 const InvoiceSchema = new Schema<InvoiceDocument>(
   {
-    invoiceNumber: { type: String, required: true, unique: true },
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: "Organization",
+      required: true,
+    },
+    invoiceNumber: { type: String, required: true },
     submeterId: {
       type: Schema.Types.ObjectId,
       ref: "Submeter",
@@ -55,9 +61,9 @@ const InvoiceSchema = new Schema<InvoiceDocument>(
   { timestamps: true }
 );
 
-InvoiceSchema.index({ submeterId: 1, period: 1 });
-InvoiceSchema.index({ paymentStatus: 1 });
-InvoiceSchema.index({ invoiceNumber: 1 });
+InvoiceSchema.index({ organizationId: 1, submeterId: 1, period: 1 });
+InvoiceSchema.index({ organizationId: 1, paymentStatus: 1 });
+InvoiceSchema.index({ organizationId: 1, invoiceNumber: 1 }, { unique: true });
 InvoiceSchema.index({ paymentStatus: 1, dueDate: 1, lastReminderSentAt: 1 });
 
 export const Invoice: Model<InvoiceDocument> =

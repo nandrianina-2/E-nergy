@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import { Invoice } from "@/lib/models";
+import { Invoice, Organization } from "@/lib/models";
 import { requireCronSecretOrAdmin, handleApiError } from "@/lib/api-helpers";
 import { createNotification, notifyAllAdmins } from "@/lib/services/notifications";
 import { paymentReminderEmailTemplate } from "@/lib/services/email";
@@ -20,7 +20,15 @@ export async function GET(req: Request) {
       now.getTime() - RELANCE_INTERVAL_DAYS * 24 * 60 * 60 * 1000
     );
 
+    // Seules les organisations avec un abonnement actif/en essai sont concernées
+    const activeOrgs = await Organization.find({
+      isActive: true,
+      subscriptionStatus: { $in: ["active", "trial"] },
+    }).select("_id");
+    const activeOrgIds = activeOrgs.map((o) => o._id);
+
     const overdueInvoices = await Invoice.find({
+      organizationId: { $in: activeOrgIds },
       paymentStatus: { $in: ["unpaid", "partial"] },
       dueDate: { $lt: now },
       $or: [
@@ -91,6 +99,7 @@ export async function GET(req: Request) {
             title: "Retard de paiement persistant",
             message: `La facture ${invoice.invoiceNumber} (${submeter.label}) est en retard depuis ${daysOverdue} jours malgré 3 relances automatiques.`,
             link: "/admin/invoices",
+            organizationId: invoice.organizationId.toString(),
           });
         }
       } catch (err) {

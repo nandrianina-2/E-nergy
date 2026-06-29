@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
     const query: Record<string, unknown> = {};
 
-    if (session.user.role !== "admin") {
+    if (session.user.role === "user") {
       if (!session.user.submeterId) {
         return NextResponse.json({
           invoices: [],
@@ -25,8 +25,19 @@ export async function GET(req: NextRequest) {
         });
       }
       query.submeterId = session.user.submeterId;
-    } else if (submeterIdParam) {
-      query.submeterId = submeterIdParam;
+    } else if (session.user.role === "admin") {
+      if (!session.user.organizationId) {
+        return NextResponse.json({
+          invoices: [],
+          pagination: { total: 0, page: 1, limit, totalPages: 0 },
+        });
+      }
+      query.organizationId = session.user.organizationId;
+      if (submeterIdParam) query.submeterId = submeterIdParam;
+    } else if (session.user.role === "super_admin") {
+      const requestedOrgId = searchParams.get("organizationId");
+      if (requestedOrgId) query.organizationId = requestedOrgId;
+      if (submeterIdParam) query.submeterId = submeterIdParam;
     }
 
     if (status) query.paymentStatus = status;

@@ -5,7 +5,8 @@ export interface UserDocument extends mongoose.Document {
   email: string;
   password: string;
   phone?: string;
-  role: "admin" | "user";
+  role: "super_admin" | "admin" | "user";
+  organizationId?: mongoose.Types.ObjectId; // absent pour le super_admin
   avatarUrl?: string;
   submeterId?: mongoose.Types.ObjectId;
   isActive: boolean;
@@ -36,7 +37,12 @@ const UserSchema = new Schema<UserDocument>(
     },
     password: { type: String, required: true, select: false },
     phone: { type: String, trim: true },
-    role: { type: String, enum: ["admin", "user"], default: "user" },
+    role: {
+      type: String,
+      enum: ["super_admin", "admin", "user"],
+      default: "user",
+    },
+    organizationId: { type: Schema.Types.ObjectId, ref: "Organization" },
     avatarUrl: { type: String },
     submeterId: { type: Schema.Types.ObjectId, ref: "Submeter" },
     isActive: { type: Boolean, default: true },
@@ -53,6 +59,7 @@ const UserSchema = new Schema<UserDocument>(
 
 UserSchema.index({ email: 1 });
 UserSchema.index({ role: 1 });
+UserSchema.index({ organizationId: 1 });
 
 export const User: Model<UserDocument> =
   (models.User as Model<UserDocument>) ||

@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import { Reading, Submeter } from "@/lib/models";
 import {
   requireAuth,
+  requireOrgScopeStrict,
   assertSubmeterAccess,
   handleApiError,
   ApiError,
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
 
     const query: Record<string, unknown> = {};
 
-    if (session.user.role !== "admin") {
+    if (session.user.role === "user") {
       if (!session.user.submeterId) {
         return NextResponse.json({
           readings: [],
@@ -35,8 +36,19 @@ export async function GET(req: NextRequest) {
         });
       }
       query.submeterId = session.user.submeterId;
-    } else if (submeterIdParam) {
-      query.submeterId = submeterIdParam;
+    } else if (session.user.role === "admin") {
+      if (!session.user.organizationId) {
+        return NextResponse.json({
+          readings: [],
+          pagination: { total: 0, page: 1, limit, totalPages: 0 },
+        });
+      }
+      query.organizationId = session.user.organizationId;
+      if (submeterIdParam) query.submeterId = submeterIdParam;
+    } else if (session.user.role === "super_admin") {
+      const requestedOrgId = searchParams.get("organizationId");
+      if (requestedOrgId) query.organizationId = requestedOrgId;
+      if (submeterIdParam) query.submeterId = submeterIdParam;
     }
 
     if (period) {
@@ -67,7 +79,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireAuth();
+    const { session, organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
 
     const body = await req.json();
@@ -75,7 +87,10 @@ export async function POST(req: NextRequest) {
 
     assertSubmeterAccess(session, data.submeterId);
 
-    const submeter = await Submeter.findById(data.submeterId);
+    const submeter = await Submeter.findOne({
+      _id: data.submeterId,
+      organizationId,
+    });
     if (!submeter) {
       throw new ApiError("Sous-compteur introuvable", 404);
     }
@@ -108,6 +123,7 @@ export async function POST(req: NextRequest) {
     const consumption = data.newIndex - oldIndex;
 
     const reading = await Reading.create({
+      organizationId,
       submeterId: data.submeterId,
       period: data.period,
       oldIndex,
@@ -117,9 +133,10 @@ export async function POST(req: NextRequest) {
       submittedAt: new Date(),
     });
 
-    const isAdminSubmitting = session.user.role === "admin";
+    const isStaffSubmitting =
+      session.user.role === "admin" || session.user.role === "super_admin";
 
-    if (isAdminSubmitting) {
+    if (isStaffSubmitting) {
       // L'admin a saisi à la place de l'utilisateur : on notifie l'utilisateur concerné
       if (submeter.userId) {
         await createNotification({
@@ -138,6 +155,7 @@ export async function POST(req: NextRequest) {
         title: "Nouveau relevé saisi",
         message: `Le sous-compteur ${submeter.label} (${submeter.code}) a déclaré une consommation de ${consumption} kWh pour la période ${data.period}.`,
         link: "/admin/readings",
+        organizationId,
       });
     }
 

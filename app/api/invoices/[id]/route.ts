@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import { Invoice, Submeter } from "@/lib/models";
+import { Invoice } from "@/lib/models";
 import {
   requireAuth,
   assertSubmeterAccess,
+  assertOrgAccess,
   handleApiError,
   ApiError,
 } from "@/lib/api-helpers";
@@ -28,6 +29,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     }
 
     assertSubmeterAccess(session, invoice.submeterId._id.toString());
+    assertOrgAccess(session, invoice.organizationId.toString(), "Facture introuvable");
 
     return NextResponse.json({ invoice });
   } catch (error) {

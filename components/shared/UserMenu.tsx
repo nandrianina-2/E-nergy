@@ -106,7 +106,11 @@ export function UserMenu() {
 
           <Link
             href={
-              session.user.role === "admin" ? "/admin/dashboard" : "/user/profile"
+              session.user.role === "super_admin"
+                ? "/super-admin/organizations"
+                : session.user.role === "admin"
+                ? "/admin/dashboard"
+                : "/user/profile"
             }
             onClick={() => setIsOpen(false)}
             className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--background-muted)]"
@@ -115,7 +119,7 @@ export function UserMenu() {
             {t.nav.profile}
           </Link>
 
-          {session.user.role !== "admin" && (
+          {session.user.role === "user" && (
             <Link
               href="/user/contact"
               onClick={() => setIsOpen(false)}

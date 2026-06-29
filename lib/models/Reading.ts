@@ -1,6 +1,7 @@
 import mongoose, { Schema, Model, models } from "mongoose";
 
 export interface ReadingDocument extends mongoose.Document {
+  organizationId: mongoose.Types.ObjectId;
   submeterId: mongoose.Types.ObjectId;
   mainMeterId?: mongoose.Types.ObjectId;
   period: string; // "YYYY-MM"
@@ -15,6 +16,11 @@ export interface ReadingDocument extends mongoose.Document {
 
 const ReadingSchema = new Schema<ReadingDocument>(
   {
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: "Organization",
+      required: true,
+    },
     submeterId: {
       type: Schema.Types.ObjectId,
       ref: "Submeter",
@@ -33,7 +39,7 @@ const ReadingSchema = new Schema<ReadingDocument>(
 
 // Un seul relevé par sous-compteur et par période
 ReadingSchema.index({ submeterId: 1, period: 1 }, { unique: true });
-ReadingSchema.index({ period: 1 });
+ReadingSchema.index({ organizationId: 1, period: 1 });
 
 export const Reading: Model<ReadingDocument> =
   (models.Reading as Model<ReadingDocument>) ||

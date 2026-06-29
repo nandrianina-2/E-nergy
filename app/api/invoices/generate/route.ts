@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { MainMeter, Reading, Invoice, Submeter } from "@/lib/models";
-import { requireAdmin, handleApiError, ApiError } from "@/lib/api-helpers";
+import {
+  requireOrgScopeStrict,
+  requireActiveSubscription,
+  handleApiError,
+  ApiError,
+} from "@/lib/api-helpers";
 import { generateInvoicesSchema } from "@/lib/validations";
 import { allocateCosts, checkDiscrepancy } from "@/lib/services/allocation";
 import { generateInvoiceNumber } from "@/lib/utils";
@@ -14,13 +19,17 @@ import { formatCurrency, formatDate, formatPeriod } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
+    await requireActiveSubscription(organizationId);
     await connectDB();
 
     const body = await req.json();
     const { mainMeterId } = generateInvoicesSchema.parse(body);
 
-    const mainMeter = await MainMeter.findById(mainMeterId);
+    const mainMeter = await MainMeter.findOne({
+      _id: mainMeterId,
+      organizationId,
+    });
     if (!mainMeter) {
       throw new ApiError("Facture principale introuvable", 404);
     }
@@ -36,9 +45,10 @@ export async function POST(req: NextRequest) {
       mainMeter.periodStart.getMonth() + 1
     ).padStart(2, "0")}`;
 
-    const readings = await Reading.find({ period: periodKey }).populate(
-      "submeterId"
-    );
+    const readings = await Reading.find({
+      organizationId,
+      period: periodKey,
+    }).populate("submeterId");
 
     if (readings.length === 0) {
       throw new ApiError(
@@ -81,6 +91,7 @@ export async function POST(req: NextRequest) {
       const invoiceNumber = generateInvoiceNumber("INV");
 
       const invoice = await Invoice.create({
+        organizationId,
         invoiceNumber,
         submeterId: allocation.submeterId,
         readingId: reading._id,
@@ -141,6 +152,7 @@ export async function POST(req: NextRequest) {
           submetersTotal: discrepancy.submetersTotalConsumption,
           differencePercent: discrepancy.differencePercent,
         }),
+        organizationId,
       });
     }
 

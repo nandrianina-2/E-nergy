@@ -86,14 +86,52 @@ export async function notifyAllAdmins(params: {
   link?: string;
   sendEmailToo?: boolean;
   emailHtml?: string;
+  /** Organisation dont les admins doivent être notifiés. Obligatoire pour
+   * éviter qu'une notification destinée à un admin fuite vers tous les
+   * admins de toutes les organisations. */
+  organizationId: string;
 }) {
   await connectDB();
-  const admins = await User.find({ role: "admin", isActive: true });
+  const admins = await User.find({
+    role: "admin",
+    organizationId: params.organizationId,
+    isActive: true,
+  });
 
   await Promise.all(
     admins.map((admin) =>
       createNotification({
         userId: admin._id.toString(),
+        type: params.type,
+        title: params.title,
+        message: params.message,
+        link: params.link,
+        sendEmailToo: params.sendEmailToo,
+        emailHtml: params.emailHtml,
+      })
+    )
+  );
+}
+
+/**
+ * Notifie uniquement le super_admin (supervision globale), par exemple pour
+ * des événements transversaux comme un nouvel abonnement à valider.
+ */
+export async function notifySuperAdmins(params: {
+  type: NotificationType;
+  title: string;
+  message: string;
+  link?: string;
+  sendEmailToo?: boolean;
+  emailHtml?: string;
+}) {
+  await connectDB();
+  const superAdmins = await User.find({ role: "super_admin", isActive: true });
+
+  await Promise.all(
+    superAdmins.map((sa) =>
+      createNotification({
+        userId: sa._id.toString(),
         type: params.type,
         title: params.title,
         message: params.message,

@@ -1,36 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Submeter, User, Invoice, MainMeter, Reading } from "@/lib/models";
-import { requireAdmin, handleApiError } from "@/lib/api-helpers";
+import { requireOrgScopeStrict, handleApiError } from "@/lib/api-helpers";
 import { checkDiscrepancy } from "@/lib/services/allocation";
 import { getCurrentPeriod } from "@/lib/utils";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
 
     const currentPeriod = getCurrentPeriod();
 
     const [totalSubmeters, activeSubmeters, totalUsers] = await Promise.all([
-      Submeter.countDocuments(),
-      Submeter.countDocuments({ isActive: true }),
-      User.countDocuments({ role: "user" }),
+      Submeter.countDocuments({ organizationId }),
+      Submeter.countDocuments({ organizationId, isActive: true }),
+      User.countDocuments({ organizationId, role: "user" }),
     ]);
 
-    const currentReadings = await Reading.find({ period: currentPeriod });
+    const currentReadings = await Reading.find({ organizationId, period: currentPeriod });
     const currentPeriodConsumption = currentReadings.reduce(
       (sum, r) => sum + r.consumption,
       0
     );
 
-    const currentInvoices = await Invoice.find({ period: currentPeriod });
+    const currentInvoices = await Invoice.find({ organizationId, period: currentPeriod });
     const currentPeriodAmount = currentInvoices.reduce(
       (sum, i) => sum + i.totalAmount,
       0
     );
 
     const unpaidInvoices = await Invoice.find({
+      organizationId,
       paymentStatus: { $in: ["unpaid", "partial"] },
     });
     const unpaidInvoicesCount = unpaidInvoices.length;
@@ -39,7 +40,7 @@ export async function GET() {
       0
     );
 
-    const latestMainMeter = await MainMeter.findOne().sort({
+    const latestMainMeter = await MainMeter.findOne({ organizationId }).sort({
       periodStart: -1,
     });
 
@@ -48,7 +49,7 @@ export async function GET() {
       const periodKey = `${latestMainMeter.periodStart.getFullYear()}-${String(
         latestMainMeter.periodStart.getMonth() + 1
       ).padStart(2, "0")}`;
-      const readings = await Reading.find({ period: periodKey });
+      const readings = await Reading.find({ organizationId, period: periodKey });
       if (readings.length > 0) {
         discrepancy = checkDiscrepancy(
           latestMainMeter.consumption,

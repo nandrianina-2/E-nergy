@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/db";
-import { User } from "@/lib/models";
+import { User, Organization } from "@/lib/models";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
@@ -44,11 +44,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("Email ou mot de passe incorrect");
         }
 
+        // Le super_admin n'a pas d'organisation et n'est jamais bloqué par un abonnement.
+        if (user.role !== "super_admin" && user.organizationId) {
+          const org = await Organization.findById(user.organizationId);
+          if (!org || !org.isActive) {
+            throw new Error(
+              "Votre organisation a été désactivée. Contactez l'administrateur principal."
+            );
+          }
+          if (
+            org.subscriptionStatus === "suspended" ||
+            org.subscriptionStatus === "expired"
+          ) {
+            throw new Error(
+              "L'abonnement de votre organisation est suspendu ou expiré. Contactez l'administrateur principal."
+            );
+          }
+        }
+
         return {
           id: user._id.toString(),
           name: user.name,
           email: user.email,
           role: user.role,
+          organizationId: user.organizationId ? user.organizationId.toString() : null,
           avatarUrl: user.avatarUrl,
           submeterId: user.submeterId ? user.submeterId.toString() : null,
           language: user.language,
@@ -62,6 +81,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
+        token.organizationId = (user as any).organizationId;
         token.avatarUrl = (user as any).avatarUrl;
         token.submeterId = (user as any).submeterId;
         token.language = (user as any).language;
@@ -82,6 +102,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
+        (session.user as any).organizationId = token.organizationId;
         (session.user as any).avatarUrl = token.avatarUrl;
         (session.user as any).submeterId = token.submeterId;
         (session.user as any).language = token.language;

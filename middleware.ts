@@ -10,6 +10,12 @@ const PUBLIC_PATHS = [
   "/sw.js",
 ];
 
+function defaultRedirectFor(role?: string): string {
+  if (role === "super_admin") return "/super-admin/organizations";
+  if (role === "admin") return "/admin/dashboard";
+  return "/user/dashboard";
+}
+
 export default auth((req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
@@ -22,9 +28,7 @@ export default auth((req) => {
   // Laisser passer les fichiers statiques et les chemins publics
   if (isPublicPath) {
     if (isLoggedIn && nextUrl.pathname === "/login") {
-      const redirectUrl =
-        userRole === "admin" ? "/admin/dashboard" : "/user/dashboard";
-      return NextResponse.redirect(new URL(redirectUrl, nextUrl));
+      return NextResponse.redirect(new URL(defaultRedirectFor(userRole), nextUrl));
     }
     return NextResponse.next();
   }
@@ -34,9 +38,7 @@ export default auth((req) => {
     if (!isLoggedIn) {
       return NextResponse.redirect(new URL("/login", nextUrl));
     }
-    const redirectUrl =
-      userRole === "admin" ? "/admin/dashboard" : "/user/dashboard";
-    return NextResponse.redirect(new URL(redirectUrl, nextUrl));
+    return NextResponse.redirect(new URL(defaultRedirectFor(userRole), nextUrl));
   }
 
   // Routes protégées : doit être connecté
@@ -46,16 +48,29 @@ export default auth((req) => {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Protection des routes admin
-  if (nextUrl.pathname.startsWith("/admin") && userRole !== "admin") {
-    return NextResponse.redirect(new URL("/user/dashboard", nextUrl));
+  // Routes super-admin : réservées exclusivement au super_admin
+  if (nextUrl.pathname.startsWith("/super-admin") && userRole !== "super_admin") {
+    return NextResponse.redirect(new URL(defaultRedirectFor(userRole), nextUrl));
   }
 
-  // Protection des routes user (un admin peut quand même y accéder si besoin, mais on reste strict)
-  if (nextUrl.pathname.startsWith("/user") && userRole !== "user") {
-    if (userRole === "admin") {
-      return NextResponse.redirect(new URL("/admin/dashboard", nextUrl));
-    }
+  // Protection des routes admin : accessible à admin ET super_admin
+  // (le super_admin peut superviser/dépanner l'espace admin si besoin)
+  if (
+    nextUrl.pathname.startsWith("/admin") &&
+    userRole !== "admin" &&
+    userRole !== "super_admin"
+  ) {
+    return NextResponse.redirect(new URL(defaultRedirectFor(userRole), nextUrl));
+  }
+
+  // Protection des routes user (un admin/super_admin peut quand même y accéder si besoin)
+  if (
+    nextUrl.pathname.startsWith("/user") &&
+    userRole !== "user" &&
+    userRole !== "admin" &&
+    userRole !== "super_admin"
+  ) {
+    return NextResponse.redirect(new URL(defaultRedirectFor(userRole), nextUrl));
   }
 
   return NextResponse.next();

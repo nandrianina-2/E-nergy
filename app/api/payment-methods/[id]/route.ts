@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { PaymentMethod } from "@/lib/models";
-import { requireAdmin, handleApiError, ApiError } from "@/lib/api-helpers";
+import { requireOrgScopeStrict, handleApiError, ApiError } from "@/lib/api-helpers";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -9,12 +9,12 @@ interface Params {
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
     const { id } = await params;
 
     const body = await req.json();
-    const paymentMethod = await PaymentMethod.findById(id);
+    const paymentMethod = await PaymentMethod.findOne({ _id: id, organizationId });
     if (!paymentMethod) {
       throw new ApiError("Moyen de paiement introuvable", 404);
     }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Payment, Invoice } from "@/lib/models";
-import { requireAuth, requireAdmin, handleApiError, ApiError } from "@/lib/api-helpers";
+import { requireAuth, requireOrgScopeStrict, handleApiError, ApiError } from "@/lib/api-helpers";
 import { recordPaymentSchema } from "@/lib/validations";
 import { createNotification } from "@/lib/services/notifications";
 import { paymentDecisionEmailTemplate } from "@/lib/services/email";
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
     const query: Record<string, unknown> = {};
 
-    if (session.user.role !== "admin") {
+    if (session.user.role === "user") {
       if (!session.user.submeterId) {
         return NextResponse.json({
           payments: [],
@@ -27,6 +27,17 @@ export async function GET(req: NextRequest) {
         });
       }
       query.submeterId = session.user.submeterId;
+    } else if (session.user.role === "admin") {
+      if (!session.user.organizationId) {
+        return NextResponse.json({
+          payments: [],
+          pagination: { total: 0, page: 1, limit, totalPages: 0 },
+        });
+      }
+      query.organizationId = session.user.organizationId;
+    } else if (session.user.role === "super_admin") {
+      const requestedOrgId = searchParams.get("organizationId");
+      if (requestedOrgId) query.organizationId = requestedOrgId;
     }
 
     if (invoiceId) query.invoiceId = invoiceId;
@@ -55,23 +66,22 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireAdmin();
+    const { session, organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
 
     const body = await req.json();
     const data = recordPaymentSchema.parse(body);
 
-    const invoice = await Invoice.findById(data.invoiceId).populate(
-      "submeterId",
-      "userId code label"
-    );
-    if (!invoice) {
-      throw new ApiError("Facture introuvable", 404);
-    }
-    await invoice.populate({
+    const invoice = await Invoice.findOne({
+      _id: data.invoiceId,
+      organizationId,
+    }).populate({
       path: "submeterId",
       populate: { path: "userId", select: "name email" },
     });
+    if (!invoice) {
+      throw new ApiError("Facture introuvable", 404);
+    }
 
     const remainingBefore = invoice.totalAmount - invoice.amountPaid;
     if (data.amount > remainingBefore + 0.01) {
@@ -82,6 +92,7 @@ export async function POST(req: NextRequest) {
     }
 
     const payment = await Payment.create({
+      organizationId,
       invoiceId: data.invoiceId,
       submeterId: invoice.submeterId._id,
       amount: data.amount,

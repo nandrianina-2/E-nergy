@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { MainMeter, Invoice } from "@/lib/models";
-import { requireAdmin, handleApiError, ApiError } from "@/lib/api-helpers";
+import { requireOrgScopeStrict, handleApiError, ApiError } from "@/lib/api-helpers";
 import { createMainMeterSchema } from "@/lib/validations";
 
 interface Params {
@@ -10,11 +10,11 @@ interface Params {
 
 export async function GET(req: NextRequest, { params }: Params) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
     const { id } = await params;
 
-    const mainMeter = await MainMeter.findById(id);
+    const mainMeter = await MainMeter.findOne({ _id: id, organizationId });
     if (!mainMeter) {
       throw new ApiError("Facture principale introuvable", 404);
     }
@@ -27,11 +27,11 @@ export async function GET(req: NextRequest, { params }: Params) {
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
     const { id } = await params;
 
-    const mainMeter = await MainMeter.findById(id);
+    const mainMeter = await MainMeter.findOne({ _id: id, organizationId });
     if (!mainMeter) {
       throw new ApiError("Facture principale introuvable", 404);
     }
@@ -62,16 +62,16 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
 export async function DELETE(req: NextRequest, { params }: Params) {
   try {
-    await requireAdmin();
+    const { organizationId } = await requireOrgScopeStrict(req);
     await connectDB();
     const { id } = await params;
 
-    const mainMeter = await MainMeter.findById(id);
+    const mainMeter = await MainMeter.findOne({ _id: id, organizationId });
     if (!mainMeter) {
       throw new ApiError("Facture principale introuvable", 404);
     }
 
-    const hasInvoices = await Invoice.exists({ mainMeterId: id });
+    const hasInvoices = await Invoice.exists({ mainMeterId: id, organizationId });
     if (hasInvoices) {
       throw new ApiError(
         "Impossible de supprimer : des factures de sous-compteurs ont déjà été générées à partir de cette facture",
